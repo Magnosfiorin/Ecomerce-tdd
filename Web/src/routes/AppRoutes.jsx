@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Catalogo from '../pages/Catalogo';
 import Login from '../pages/Login';
 import CadastroProduto from '../pages/CadastroProduto';
+import Dashboard from '../pages/Dashboard';
 import Carrinho from '../pages/Carrinho';
 import Checkout from '../pages/Checkout';
 
@@ -18,6 +19,9 @@ export default function AppRoutes() {
 
       {/* Dev 1: Módulo de Login e Identificação de Perfil */}
       <Route path="/login" element={<Login />} />
+
+      {/* Painel do Vendedor: Listagem de Produtos da Loja */}
+      <Route path="/dashboard" element={<Dashboard />} />
 
       {/* Dev 2: Módulo de Cadastro de Produtos (Vendedor) */}
       <Route path="/cadastro-produto" element={<CadastroProduto />} />

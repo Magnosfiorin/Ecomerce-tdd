@@ -1,15 +1,11 @@
 /**
- * Centralizador de Acesso à API Backend e Banco de Dados Externo.
+ * Centralizador de Acesso à API Backend e Banco de Dados PostgreSQL.
  * 
- * Este módulo gerencia as chamadas HTTP para o backend Java (que acessa o PostgreSQL),
- * configurado através da variável de ambiente VITE_API_BASE_URL.
+ * Gerencia as chamadas HTTP para o backend Java (porta 8080).
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
-/**
- * Utilitário genérico para requisições HTTP com tratamento de erro e JSON.
- */
 async function request(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
   const defaultHeaders = {
@@ -29,37 +25,58 @@ async function request(endpoint, options = {}) {
     const data = isJson ? await response.json() : await response.text();
 
     if (!response.ok) {
-      throw new Error(data?.erro || `Erro HTTP: ${response.status}`);
+      const mensagemErro = (typeof data === 'object' && data?.erro) ? data.erro : `Erro HTTP: ${response.status}`;
+      throw new Error(mensagemErro);
     }
 
     return data;
   } catch (error) {
-    console.warn(`[API] Falha ao comunicar com endpoint ${endpoint}:`, error.message);
+    console.warn(`[API] Falha no endpoint ${endpoint}:`, error.message);
     throw error;
   }
 }
 
 export const api = {
-  /**
-   * Verifica a conectividade do Backend e do Banco PostgreSQL Externo.
-   */
   async getHealth() {
     return request('/health');
   },
 
   // =========================================================================
-  // Dev 1: Módulo Login & Autenticação
+  // Módulo de Autenticação e Usuários (Dev 1)
   // =========================================================================
-  async login(email, senha, perfil) {
+
+  async login(email, senha) {
     return request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, senha, perfil }),
+      body: JSON.stringify({ email, senha }),
+    });
+  },
+
+  async cadastrarCliente(dadosCliente) {
+    return request('/auth/cadastro/cliente', {
+      method: 'POST',
+      body: JSON.stringify(dadosCliente),
+    });
+  },
+
+  async cadastrarVendedor(usuario, loja) {
+    return request('/auth/cadastro/vendedor', {
+      method: 'POST',
+      body: JSON.stringify({ usuario, loja }),
+    });
+  },
+
+  async criarLojaParaCliente(usuarioId, dadosLoja) {
+    return request('/lojas', {
+      method: 'POST',
+      body: JSON.stringify({ usuarioId, ...dadosLoja }),
     });
   },
 
   // =========================================================================
-  // Dev 2: Módulo Cadastro de Produtos (Vendedor)
+  // Módulo de Produtos e Catálogo (Dev 2 e Dev 3)
   // =========================================================================
+
   async cadastrarProduto(produto) {
     return request('/produtos', {
       method: 'POST',
@@ -67,9 +84,6 @@ export const api = {
     });
   },
 
-  // =========================================================================
-  // Dev 3: Módulo Catálogo (Cliente)
-  // =========================================================================
   async listarProdutos() {
     return request('/produtos', {
       method: 'GET',
@@ -77,8 +91,9 @@ export const api = {
   },
 
   // =========================================================================
-  // Dev 4: Módulo Carrinho de Compras
+  // Módulo Carrinho e Checkout (Dev 4 e Dev 5)
   // =========================================================================
+
   async atualizarCarrinho(itens) {
     return request('/carrinho', {
       method: 'POST',
@@ -86,9 +101,6 @@ export const api = {
     });
   },
 
-  // =========================================================================
-  // Dev 5: Módulo Checkout
-  // =========================================================================
   async finalizarCheckout(dadosPedido) {
     return request('/checkout', {
       method: 'POST',

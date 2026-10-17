@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import br.com.ecommerce.service.UsuarioService;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -28,8 +29,11 @@ public class Router implements HttpHandler {
     private final Map<String, RouteHandler> routes = new HashMap<>();
     private final DatabaseConfig databaseConfig;
 
+    private final UsuarioService usuarioService;
+
     public Router(DatabaseConfig databaseConfig) {
         this.databaseConfig = databaseConfig;
+        this.usuarioService = new UsuarioService(databaseConfig);
         registerDefaultRoutes();
     }
 
@@ -43,7 +47,6 @@ public class Router implements HttpHandler {
 
     /**
      * Centralização de todas as rotas do E-Commerce.
-     * Serve como ponto único onde cada integrante (Dev 1 a 5) acopla seus controladores.
      */
     private void registerDefaultRoutes() {
         // Rota de Health Check / Status da API e Banco de Dados
@@ -57,12 +60,118 @@ public class Router implements HttpHandler {
             sendJsonResponse(exchange, 200, response);
         });
 
-        // Dev 1: Módulo Login (Vendedor / Cliente)
+        // =========================================================================
+        // Dev 1: Autenticação e Cadastro (Cliente / Vendedor / Lojas)
+        // =========================================================================
+
+        // 1. Login
         register("POST", "/api/auth/login", exchange -> {
-            Map<String, Object> response = new HashMap<>();
-            response.put("mensagem", "Endpoint de Login pronto para implementação do Dev 1");
-            response.put("modulo", "Autenticação");
-            sendJsonResponse(exchange, 200, response);
+            Map<?, ?> body = readJsonBody(exchange, Map.class);
+            if (body == null) {
+                sendError(exchange, 400, "Corpo da requisição inválido.");
+                return;
+            }
+
+            String email = (String) body.get("email");
+            String senha = (String) body.get("senha");
+
+            try {
+                br.com.ecommerce.model.Usuario usuario = usuarioService.autenticar(email, senha);
+                if (usuario != null) {
+                    Map<String, Object> resp = new HashMap<>();
+                    resp.put("sucesso", true);
+                    resp.put("usuario", usuario);
+                    br.com.ecommerce.model.Loja loja = usuarioService.buscarLojaPorUsuario(usuario.getId());
+                    if (loja != null) {
+                        resp.put("loja", loja);
+                    }
+                    sendJsonResponse(exchange, 200, resp);
+                } else {
+                    sendError(exchange, 401, "E-mail ou senha incorretos.");
+                }
+            } catch (IllegalArgumentException e) {
+                sendError(exchange, 400, e.getMessage());
+            }
+        });
+
+        // 2. Cadastro de Cliente (tipo 1)
+        register("POST", "/api/auth/cadastro/cliente", exchange -> {
+            br.com.ecommerce.model.Usuario usuario = readJsonBody(exchange, br.com.ecommerce.model.Usuario.class);
+            if (usuario == null) {
+                sendError(exchange, 400, "Dados do cliente não informados.");
+                return;
+            }
+
+            try {
+                br.com.ecommerce.model.Usuario salvo = usuarioService.cadastrarCliente(usuario);
+                Map<String, Object> resp = new HashMap<>();
+                resp.put("sucesso", true);
+                resp.put("mensagem", "Cliente cadastrado com sucesso!");
+                resp.put("usuario", salvo);
+                sendJsonResponse(exchange, 201, resp);
+            } catch (IllegalArgumentException e) {
+                sendError(exchange, 400, e.getMessage());
+            } catch (Exception e) {
+                sendError(exchange, 500, "Erro ao cadastrar cliente: " + e.getMessage());
+            }
+        });
+
+        // 3. Cadastro de Vendedor em 2 etapas (tipo 0 + Loja)
+        register("POST", "/api/auth/cadastro/vendedor", exchange -> {
+            Map<?, ?> body = readJsonBody(exchange, Map.class);
+            if (body == null) {
+                sendError(exchange, 400, "Dados incompletos.");
+                return;
+            }
+
+            try {
+                String usuarioJson = gson.toJson(body.get("usuario"));
+                String lojaJson = gson.toJson(body.get("loja"));
+
+                br.com.ecommerce.model.Usuario usuario = gson.fromJson(usuarioJson, br.com.ecommerce.model.Usuario.class);
+                br.com.ecommerce.model.Loja loja = gson.fromJson(lojaJson, br.com.ecommerce.model.Loja.class);
+
+                br.com.ecommerce.model.Usuario vendedorSalvo = usuarioService.cadastrarVendedorComLoja(usuario, loja);
+
+                Map<String, Object> resp = new HashMap<>();
+                resp.put("sucesso", true);
+                resp.put("mensagem", "Vendedor e loja cadastrados com sucesso!");
+                resp.put("usuario", vendedorSalvo);
+                resp.put("loja", loja);
+                sendJsonResponse(exchange, 201, resp);
+            } catch (IllegalArgumentException e) {
+                sendError(exchange, 400, e.getMessage());
+            } catch (Exception e) {
+                sendError(exchange, 500, "Erro ao cadastrar vendedor: " + e.getMessage());
+            }
+        });
+
+        // 4. Criação de Loja para Cliente Existente (Promove para tipo 2)
+        register("POST", "/api/lojas", exchange -> {
+            Map<?, ?> body = readJsonBody(exchange, Map.class);
+            if (body == null || !body.containsKey("usuarioId")) {
+                sendError(exchange, 400, "Identificação do usuário obrigatória.");
+                return;
+            }
+
+            try {
+                int usuarioId = ((Number) body.get("usuarioId")).intValue();
+                String lojaJson = gson.toJson(body);
+                br.com.ecommerce.model.Loja loja = gson.fromJson(lojaJson, br.com.ecommerce.model.Loja.class);
+
+                br.com.ecommerce.model.Loja lojaSalva = usuarioService.criarLojaParaCliente(usuarioId, loja);
+
+                Map<String, Object> resp = new HashMap<>();
+                resp.put("sucesso", true);
+                resp.put("mensagem", "Loja criada com sucesso! Seu perfil agora é Vendedor e Cliente.");
+                resp.put("loja", lojaSalva);
+                resp.put("novoTipoUsuario", br.com.ecommerce.model.Usuario.TIPO_VENDEDOR_CLIENTE);
+                sendJsonResponse(exchange, 201, resp);
+            } catch (IllegalArgumentException e) {
+                sendError(exchange, 400, e.getMessage());
+            } catch (Exception e) {
+                sendError(exchange, 500, "Erro ao criar loja: " + e.getMessage());
+            }
         });
 
         // Dev 2: Módulo Cadastro de Produtos (Vendedor)
