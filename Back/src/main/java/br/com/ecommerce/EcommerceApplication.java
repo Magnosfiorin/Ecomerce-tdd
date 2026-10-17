@@ -1,6 +1,7 @@
 package br.com.ecommerce;
 
 import br.com.ecommerce.config.DatabaseConfig;
+import br.com.ecommerce.config.DotenvLoader;
 import br.com.ecommerce.config.Router;
 import com.sun.net.httpserver.HttpServer;
 
@@ -36,7 +37,8 @@ public class EcommerceApplication {
      * application.properties ou valor padrão 8080.
      */
     private static int resolvePort() {
-        String envPort = System.getenv("PORT");
+        DotenvLoader.load();
+        String envPort = DotenvLoader.get("PORT");
         if (envPort != null && !envPort.isBlank()) {
             try {
                 return Integer.parseInt(envPort);

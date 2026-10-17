@@ -8,9 +8,9 @@ import java.sql.Statement;
 import java.util.Properties;
 
 /**
- * Centraliza a configuração e conexão com o banco de dados PostgreSQL externo.
- * Permite configurar via variáveis de ambiente (DB_URL, DB_USER, DB_PASSWORD)
- * ou arquivo application.properties.
+ * Centraliza a configuração e conexão com o banco de dados PostgreSQL.
+ * Lê prioritariamente as credenciais a partir do arquivo .env na raiz do projeto,
+ * variáveis de ambiente do sistema, ou application.properties.
  */
 public class DatabaseConfig {
 
@@ -29,10 +29,13 @@ public class DatabaseConfig {
     }
 
     /**
-     * Carrega as configurações priorizando Variáveis de Ambiente,
+     * Carrega as configurações priorizando o arquivo .env / Variáveis de Ambiente,
      * depois System Properties, e por fim application.properties.
      */
     private void loadConfiguration() {
+        // Carrega o arquivo .env na raiz do projeto caso exista
+        DotenvLoader.load();
+
         Properties properties = new Properties();
         try (InputStream input = getClass().getClassLoader().getResourceAsStream("application.properties")) {
             if (input != null) {
@@ -42,12 +45,12 @@ public class DatabaseConfig {
             System.err.println("[DatabaseConfig] Aviso: Não foi possível ler application.properties: " + e.getMessage());
         }
 
-        // 1. Variáveis de Ambiente
-        String envUrl = System.getenv("DB_URL");
-        String envUser = System.getenv("DB_USER");
-        String envPass = System.getenv("DB_PASSWORD");
+        // 1. Busca do .env ou variáveis de ambiente do sistema
+        String envUrl = DotenvLoader.get("DB_URL");
+        String envUser = DotenvLoader.get("DB_USER");
+        String envPass = DotenvLoader.get("DB_PASSWORD");
 
-        // 2. System Properties (-Ddb.url=...)
+        // 2. System Properties ou application.properties com fallback seguro
         String propUrl = System.getProperty("db.url", properties.getProperty("db.url", "jdbc:postgresql://localhost:5432/ecommerce"));
         String propUser = System.getProperty("db.user", properties.getProperty("db.user", "postgres"));
         String propPass = System.getProperty("db.password", properties.getProperty("db.password", "postgres"));
@@ -89,13 +92,13 @@ public class DatabaseConfig {
     }
 
     /**
-     * Testa se o banco de dados externo está acessível.
+     * Testa se o banco de dados local/externo está acessível com as credenciais atuais.
      */
     public boolean testConnection() {
         try (Connection conn = getConnection()) {
             return conn != null && !conn.isClosed();
         } catch (SQLException e) {
-            System.err.println("[DatabaseConfig] Não foi possível conectar ao PostgreSQL: " + e.getMessage());
+            System.err.println("[DatabaseConfig] Não foi possível conectar ao PostgreSQL (" + this.url + "): " + e.getMessage());
             return false;
         }
     }
