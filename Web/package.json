@@ -1,16 +1,24 @@
 {
-  "name": "web",
+  "name": "ecommerce-web",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Frontend React + Vite para E-Commerce TDD",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
+  "dependencies": {
+    "lucide-react": "^1.59.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.4"
+  },
   "devDependencies": {
-    "cypress": "^16.2.0"
+    "@vitejs/plugin-react": "^6.1.2",
+    "cypress": "^16.2.0",
+    "vite": "^8.3.4"
   }
 }

@@ -7,8 +7,9 @@ Back/target/
 *.iml
 .vscode/
 
-# Node / Cypress
+# Node / Cypress / Build
 Web/node_modules/
+Web/dist/
 Web/cypress/videos/
 Web/cypress/screenshots/
 
