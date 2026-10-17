@@ -68,4 +68,119 @@ public class EcommerceApplicationTest {
         assertEquals(404, response.statusCode());
         assertTrue(response.body().contains("Rota não encontrada"));
     }
+
+    @Test
+    @DisplayName("Integração HTTP: Sucesso no cadastro de cliente, login e identificação do perfil")
+    void deveCadastrarELogarClienteComSucessoViaHttp() throws Exception {
+        String emailUnico = "cliente_http_" + System.currentTimeMillis() + "@teste.com";
+        String cadastroJson = """
+            {
+                "nome": "Rodrigo",
+                "sobrenome": "Moraes",
+                "email": "%s",
+                "senha": "senhaSegura123",
+                "cpf": "123.456.789-01",
+                "cep": "01001-000",
+                "endereco": "Av Paulista",
+                "numero": "1000",
+                "bairro": "Bela Vista",
+                "cidade": "São Paulo",
+                "estado": "SP",
+                "pais": "Brasil",
+                "tipoUsuario": 1
+            }
+        """.formatted(emailUnico);
+
+        // 1. Cadastra o Cliente
+        HttpRequest postCadastro = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/api/auth/cadastro/cliente"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(cadastroJson))
+                .build();
+
+        HttpResponse<String> respCadastro = httpClient.send(postCadastro, HttpResponse.BodyHandlers.ofString());
+        assertEquals(201, respCadastro.statusCode());
+        assertTrue(respCadastro.body().contains("Cliente cadastrado com sucesso!"));
+
+        // 2. Realiza Login com credenciais válidas e verifica identificação do perfil (tipo 1)
+        String loginJson = """
+            {
+                "email": "%s",
+                "senha": "senhaSegura123"
+            }
+        """.formatted(emailUnico);
+
+        HttpRequest postLogin = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/api/auth/login"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(loginJson))
+                .build();
+
+        HttpResponse<String> respLogin = httpClient.send(postLogin, HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, respLogin.statusCode());
+        assertTrue(respLogin.body().contains("\"sucesso\": true"));
+        assertTrue(respLogin.body().contains("\"tipoUsuario\": 1"));
+        assertTrue(respLogin.body().contains("\"nome\": \"Rodrigo\""));
+    }
+
+    @Test
+    @DisplayName("Integração HTTP: Retornar 401 Unauthorized para credenciais incorretas")
+    void deveRetornar401ParaCredenciaisIncorretasViaHttp() throws Exception {
+        String loginIncorreto = """
+            {
+                "email": "usuario.inexistente@dominio.com",
+                "senha": "senhaErrada123"
+            }
+        """;
+
+        HttpRequest postLogin = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/api/auth/login"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(loginIncorreto))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(postLogin, HttpResponse.BodyHandlers.ofString());
+        assertEquals(401, response.statusCode());
+        assertTrue(response.body().contains("E-mail ou senha incorretos."));
+    }
+
+    @Test
+    @DisplayName("Integração HTTP (Baseado em Requisitos): Rejeição de login caso e-mail seja inválido ou senha < 4 caracteres")
+    void deveRejeitarLoginComEmailInvalidoOuSenhaCurtaViaHttp() throws Exception {
+        // Cenário 1: E-mail em formato inválido
+        String emailInvalidoJson = """
+            {
+                "email": "email_sem_arroba.com",
+                "senha": "senhaValida123"
+            }
+        """;
+
+        HttpRequest reqEmailInvalido = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/api/auth/login"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(emailInvalidoJson))
+                .build();
+
+        HttpResponse<String> respEmail = httpClient.send(reqEmailInvalido, HttpResponse.BodyHandlers.ofString());
+        assertEquals(400, respEmail.statusCode());
+        assertTrue(respEmail.body().contains("E-mail em formato inválido"));
+
+        // Cenário 2: Senha com menos de 4 caracteres
+        String senhaCurtaJson = """
+            {
+                "email": "cliente.valido@dominio.com",
+                "senha": "123"
+            }
+        """;
+
+        HttpRequest reqSenhaCurta = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/api/auth/login"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(senhaCurtaJson))
+                .build();
+
+        HttpResponse<String> respSenha = httpClient.send(reqSenhaCurta, HttpResponse.BodyHandlers.ofString());
+        assertEquals(400, respSenha.statusCode());
+        assertTrue(respSenha.body().contains("no mínimo 4 caracteres"));
+    }
 }
