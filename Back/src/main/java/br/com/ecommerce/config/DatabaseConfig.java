@@ -137,6 +137,16 @@ public class DatabaseConfig {
             ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pais VARCHAR(50) NOT NULL DEFAULT 'Brasil';
             ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS tipo_usuario INT NOT NULL DEFAULT 1;
 
+            DO $$ 
+            BEGIN 
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='usuarios' AND column_name='perfil' AND is_nullable='NO'
+                ) THEN 
+                    ALTER TABLE usuarios ALTER COLUMN perfil DROP NOT NULL; 
+                END IF; 
+            END $$;
+
             CREATE TABLE IF NOT EXISTS lojas (
                 id SERIAL PRIMARY KEY,
                 usuario_id INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,

@@ -72,8 +72,8 @@ public class Router implements HttpHandler {
                 return;
             }
 
-            String email = (String) body.get("email");
-            String senha = (String) body.get("senha");
+            String email = body.get("email") != null ? String.valueOf(body.get("email")) : null;
+            String senha = body.get("senha") != null ? String.valueOf(body.get("senha")) : null;
 
             try {
                 br.com.ecommerce.model.Usuario usuario = usuarioService.autenticar(email, senha);
@@ -276,8 +276,13 @@ public class Router implements HttpHandler {
      * Lê o corpo da requisição e desserializa para a classe informada.
      */
     public static <T> T readJsonBody(HttpExchange exchange, Class<T> clazz) {
-        try (InputStreamReader reader = new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8)) {
-            return gson.fromJson(reader, clazz);
+        try {
+            byte[] bytes = exchange.getRequestBody().readAllBytes();
+            if (bytes == null || bytes.length == 0) {
+                return null;
+            }
+            String json = new String(bytes, StandardCharsets.UTF_8);
+            return gson.fromJson(json, clazz);
         } catch (Exception e) {
             return null;
         }

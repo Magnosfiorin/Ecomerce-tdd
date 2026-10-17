@@ -28,15 +28,27 @@ public class UsuarioService {
 
     /**
      * Autentica um usuário por e-mail e senha.
+     * Requisitos de validação:
+     * - E-mail e senha são obrigatórios.
+     * - O e-mail deve possuir formato válido (RFC / Regex).
+     * - A senha deve possuir no mínimo 4 caracteres.
      */
     public Usuario autenticar(String email, String senha) {
         if (email == null || email.isBlank() || senha == null || senha.isBlank()) {
             throw new IllegalArgumentException("E-mail e senha são obrigatórios.");
         }
 
+        if (!Usuario.isEmailValido(email)) {
+            throw new IllegalArgumentException("E-mail em formato inválido. Informe um formato válido (exemplo@dominio.com).");
+        }
+
+        if (senha.length() < 4) {
+            throw new IllegalArgumentException("A senha deve conter no mínimo 4 caracteres.");
+        }
+
         if (databaseConfig != null && databaseConfig.testConnection()) {
             String sql = "SELECT id, nome, sobrenome, email, senha, cpf, cep, endereco, numero, bairro, cidade, estado, pais, tipo_usuario " +
-                         "FROM usuarios WHERE email = ? AND senha = ?";
+                         "FROM usuarios WHERE LOWER(email) = LOWER(?) AND senha = ?";
             try (Connection conn = databaseConfig.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, email.trim());
