@@ -1,0 +1,17 @@
+# Java / Maven
+Back/target/
+*.class
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+
+# Node / Cypress
+Web/node_modules/
+Web/cypress/videos/
+Web/cypress/screenshots/
+
+# Environment / Temp
+.env
+*.log
