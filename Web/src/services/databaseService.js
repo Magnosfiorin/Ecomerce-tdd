@@ -16,13 +16,15 @@ class DatabaseService {
       const health = await api.getHealth();
       return {
         online: true,
-        database: health.database || 'Conectado',
+        databaseConnected: health.database === 'CONECTADO',
+        database: health.database || 'Status desconhecido',
         service: health.service,
       };
     } catch {
       return {
         online: false,
-        database: 'Offline (Modo Mock Ativo)',
+        databaseConnected: false,
+        database: 'API indisponível',
         service: 'Local',
       };
     }
@@ -93,12 +95,15 @@ class DatabaseService {
     try {
       const query = busca.trim() ? `?busca=${encodeURIComponent(busca.trim())}` : '';
       const data = await api.listarProdutos(query);
-      if (Array.isArray(data.produtos) && data.produtos.length > 0) {
+      if (Array.isArray(data.produtos)) {
         return data.produtos;
       }
-      return this.filtrarMock(busca);
-    } catch {
-      return this.filtrarMock(busca);
+      throw new Error('A API retornou uma resposta de produtos inválida.');
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        return this.filtrarMock(busca);
+      }
+      throw error;
     }
   }
 
@@ -110,10 +115,13 @@ class DatabaseService {
   async criarProduto(produto) {
     try {
       return await api.cadastrarProduto(produto);
-    } catch {
-      const novo = { id: Date.now(), ...produto };
-      this.mockProdutos.push(novo);
-      return novo;
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        const novo = { id: Date.now(), ...produto };
+        this.mockProdutos.push(novo);
+        return novo;
+      }
+      throw error;
     }
   }
 

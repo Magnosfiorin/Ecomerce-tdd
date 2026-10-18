@@ -6,6 +6,7 @@ import { ShoppingCart, Check, RefreshCw, Star, Layers, Sparkles } from 'lucide-r
 export default function Catalogo() {
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState('');
   const [versaoAB, setVersaoAB] = useState('B'); // 'A' ou 'B' para o teste de usabilidade (Dev 3)
   const [adicionadoId, setAdicionadoId] = useState(null);
   const [busca, setBusca] = useState('');
@@ -13,9 +14,16 @@ export default function Catalogo() {
 
    const carregarProdutos = async (termo = busca) => {
     setLoading(true);
-    const lista = await databaseService.getProdutos(termo);
-    setProdutos(lista);
-    setLoading(false);
+    setErro('');
+    try {
+      const lista = await databaseService.getProdutos(termo);
+      setProdutos(lista);
+    } catch (error) {
+      setProdutos([]);
+      setErro(`Não foi possível carregar os produtos da API: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Recarrega a lista quando o texto da busca muda (com pequena espera ao digitar)
@@ -77,9 +85,11 @@ export default function Catalogo() {
         data-cy="busca-produto"
       />
 
+      {erro && <div className="alert alert-error" role="alert">{erro}</div>}
+
       {loading ? (
         <div className="loading-state">Carregando catálogo do banco de dados...</div>
-      ) : produtos.length === 0 ? (
+      ) : erro ? null : produtos.length === 0 ? (
         <div className="empty-state">Nenhum produto cadastrado no momento.</div>
       ) : (
         /* Renderização Condicional: Versão A (Lista) vs Versão B (Cards) */
