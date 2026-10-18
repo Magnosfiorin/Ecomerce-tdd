@@ -9,7 +9,11 @@ export default function Navbar() {
   const { usuario, loja, logout, isVendedor, tipoDescricao } = useAuth();
   const { totalItens } = useCart();
   const location = useLocation();
-  const [backendStatus, setBackendStatus] = useState({ online: false, database: 'Verificando...' });
+  const [backendStatus, setBackendStatus] = useState({
+    online: false,
+    databaseConnected: false,
+    database: 'Verificando...',
+  });
 
   useEffect(() => {
     databaseService.checkConnection().then(setBackendStatus);
@@ -20,6 +24,8 @@ export default function Navbar() {
   }, []);
 
   const isActive = (path) => location.pathname === path;
+  const bancoConectado = backendStatus.online && backendStatus.databaseConnected;
+  const statusClass = bancoConectado ? 'online' : backendStatus.online ? 'degraded' : 'offline';
 
   return (
     <header className="navbar">
@@ -29,8 +35,8 @@ export default function Navbar() {
             <Store className="brand-icon" />
             <span>E-Commerce <small>TDD</small></span>
           </Link>
-          <div className={`status-pill ${backendStatus.online ? 'online' : 'offline'}`} title="Status da Conexão com Backend e Banco">
-            {backendStatus.online ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+          <div className={`status-pill ${statusClass}`} title="Status da Conexão com Backend e Banco">
+            {bancoConectado ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
             <span>Banco: {backendStatus.database}</span>
           </div>
         </div>
