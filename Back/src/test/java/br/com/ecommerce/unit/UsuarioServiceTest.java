@@ -2,6 +2,7 @@ package br.com.ecommerce.unit;
 
 import br.com.ecommerce.model.Loja;
 import br.com.ecommerce.model.Usuario;
+import br.com.ecommerce.service.SenhaUtils;
 import br.com.ecommerce.service.UsuarioService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,6 +30,10 @@ public class UsuarioServiceTest {
         assertNotNull(salvo.getId());
         assertEquals(Usuario.TIPO_CLIENTE, salvo.getTipoUsuario());
         assertEquals("Lucas", salvo.getNome());
+        assertNotEquals("senha123", salvo.getSenha());
+        assertTrue(SenhaUtils.isHashBCrypt(salvo.getSenha()));
+        assertTrue(SenhaUtils.verificarSenha("senha123", salvo.getSenha()));
+        assertFalse(SenhaUtils.verificarSenha("senha123", "senha123"));
     }
 
     @Test
@@ -65,6 +70,8 @@ public class UsuarioServiceTest {
 
         assertNotNull(vendedorSalvo.getId());
         assertEquals(Usuario.TIPO_VENDEDOR, vendedorSalvo.getTipoUsuario());
+        assertTrue(SenhaUtils.isHashBCrypt(vendedorSalvo.getSenha()));
+        assertTrue(SenhaUtils.verificarSenha("senha123", vendedorSalvo.getSenha()));
 
         Loja lojaBuscada = service.buscarLojaPorUsuario(vendedorSalvo.getId());
         assertNotNull(lojaBuscada);
