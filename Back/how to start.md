@@ -27,7 +27,7 @@ O backend pode ser publicado como container usando `Dockerfile.vercel`.
 
 1. No projeto do backend na Vercel, configure **Root Directory** como `Back`.
 2. Faça um novo deploy. A Vercel detectará `Dockerfile.vercel` e executará o servidor Java.
-3. Em **Settings → Environment Variables**, configure `DB_URL`, `DB_USER` e `DB_PASSWORD` com as credenciais do PostgreSQL de produção. Não coloque essas credenciais no repositório.
+3. Em **Settings → Environment Variables**, a integração Neon pode fornecer `DATABASE_URL` e variáveis `PG*`. O backend aceita esses nomes ou, para configuração manual, `DB_URL`, `DB_USER` e `DB_PASSWORD`. Configure as variáveis no projeto Back e no ambiente Production; não coloque credenciais no repositório.
 4. Depois do deploy, confirme que `https://ecomerce-tdd-back-steel.vercel.app/api/health` retorna JSON com `"status": "UP"`.
 
-O servidor usa a variável `PORT` fornecida pela Vercel. O banco precisa aceitar conexões de saída do container.
+Se nenhuma configuração PostgreSQL for encontrada na Vercel, o backend falha com uma mensagem explícita em vez de tentar conectar em `localhost`. O servidor usa a variável `PORT` fornecida pela Vercel. O banco precisa aceitar conexões de saída do container.

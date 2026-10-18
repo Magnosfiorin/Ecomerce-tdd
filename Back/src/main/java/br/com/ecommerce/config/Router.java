@@ -66,7 +66,9 @@ public class Router implements HttpHandler {
             Map<String, Object> response = new HashMap<>();
             response.put("status", "UP");
             response.put("service", "ecommerce-backend");
-            response.put("database", dbConnected ? "CONECTADO" : "DESCONECTADO (Verifique as credenciais no .env)");
+            response.put("database", dbConnected
+                    ? "CONECTADO"
+                    : "DESCONECTADO (Verifique as variáveis de ambiente do banco)");
             response.put("timestamp", System.currentTimeMillis());
             sendJsonResponse(exchange, 200, response);
         });
