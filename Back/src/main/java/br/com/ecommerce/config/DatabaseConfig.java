@@ -75,28 +75,38 @@ public class DatabaseConfig {
                 && !vercelDeployment.isBlank()
                 && !"0".equals(vercelDeployment)
                 && !"false".equalsIgnoreCase(vercelDeployment);
-        if (runningOnVercel && envUrl == null) {
-            throw new IllegalStateException(
-                    "Configuração do Neon ausente. Configure DATABASE_URL ou as variáveis PGHOST, PGDATABASE, PGUSER e PGPASSWORD no projeto Backend da Vercel.");
-        }
-
         String propUrl = System.getProperty("db.url",
                 properties.getProperty("db.url", "jdbc:postgresql://localhost:5432/ecommerce"));
         String propUser = System.getProperty("db.user", properties.getProperty("db.user", "postgres"));
         String propPass = System.getProperty("db.password", properties.getProperty("db.password", "postgres"));
 
+        if (runningOnVercel && envUrl == null) {
+            System.err.println(
+                    "[DatabaseConfig] Configuração do Neon ausente. Configure DATABASE_URL ou DB_URL no projeto Backend da Vercel.");
+            this.url = null;
+            this.user = null;
+            this.password = null;
+            return;
+        }
+
         ConnectionSettings connection = envUrl == null
                 ? new ConnectionSettings(propUrl, null, null)
                 : parseConnectionString(envUrl);
-        this.url = connection.jdbcUrl();
-        this.user = firstNonBlank(envUser, connection.user(), propUser);
-        this.password = firstNonBlank(envPass, connection.password(), propPass);
+        String resolvedUser = firstNonBlank(envUser, connection.user(), runningOnVercel ? null : propUser);
+        String resolvedPassword = firstNonBlank(envPass, connection.password(), runningOnVercel ? null : propPass);
 
-        if (runningOnVercel && (envUser == null && connection.user() == null
-                || envPass == null && connection.password() == null)) {
-            throw new IllegalStateException(
-                    "Credenciais do Neon ausentes. Configure DATABASE_URL com usuário e senha ou as variáveis PGUSER e PGPASSWORD no projeto Backend da Vercel.");
+        if (runningOnVercel && (resolvedUser == null || resolvedPassword == null)) {
+            System.err.println(
+                    "[DatabaseConfig] Credenciais do Neon ausentes. Configure uma URL com usuário e senha ou as variáveis PGUSER e PGPASSWORD no projeto Backend da Vercel.");
+            this.url = null;
+            this.user = null;
+            this.password = null;
+            return;
         }
+
+        this.url = connection.jdbcUrl();
+        this.user = firstNonBlank(resolvedUser, propUser);
+        this.password = firstNonBlank(resolvedPassword, propPass);
     }
 
     static ConnectionSettings parseConnectionString(String connectionString) {
