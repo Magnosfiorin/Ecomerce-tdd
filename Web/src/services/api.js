@@ -5,9 +5,12 @@
  */
 
 const DEFAULT_API_BASE_URL = import.meta.env.PROD
-  ? 'https://ecomerce-tdd-back.vercel.app/api'
+  ? 'https://ecomerce-tdd-back-steel.vercel.app/api'
   : 'http://localhost:8080/api';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL;
+const CONFIGURED_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.PROD && CONFIGURED_API_BASE_URL?.startsWith('http://localhost:')
+  ? DEFAULT_API_BASE_URL
+  : CONFIGURED_API_BASE_URL || DEFAULT_API_BASE_URL;
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;

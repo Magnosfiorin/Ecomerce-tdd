@@ -95,6 +95,11 @@ body {
   color: #b45309;
 }
 
+.status-pill.degraded {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
 .navbar-links {
   display: flex;
   align-items: center;
@@ -1180,6 +1185,5 @@ input:focus, select:focus {
   border-radius: 8px;
   font-size: 1rem;
 }
-
 
 
