@@ -19,6 +19,7 @@ export default function Dashboard() {
   const { usuario, loja, tipoDescricao } = useAuth();
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState('');
 
   useEffect(() => {
     async function carregarProdutos() {
@@ -28,6 +29,7 @@ export default function Dashboard() {
         setProdutos(data || []);
       } catch (err) {
         console.error('Erro ao carregar produtos:', err);
+        setErro(`Não foi possível carregar os produtos da API: ${err.message}`);
       } finally {
         setLoading(false);
       }
@@ -137,6 +139,8 @@ export default function Dashboard() {
           <div className="dashboard-loading">
             <p>Carregando produtos da loja...</p>
           </div>
+        ) : erro ? (
+          <div className="alert alert-error" role="alert">{erro}</div>
         ) : produtos.length === 0 ? (
           <div className="empty-state">
             <Package size={48} className="empty-icon" />
