@@ -84,8 +84,8 @@ export const api = {
     });
   },
 
-  async listarProdutos() {
-    return request('/produtos', {
+   async listarProdutos(query = '') {
+    return request(`/produtos${query}`, {
       method: 'GET',
     });
   },
