@@ -89,18 +89,24 @@ class DatabaseService {
   // Produtos & Catálogo
   // =========================================================================
 
-  async getProdutos() {
+  async getProdutos(busca = '') {
     try {
-      const data = await api.listarProdutos();
+      const query = busca.trim() ? `?busca=${encodeURIComponent(busca.trim())}` : '';
+      const data = await api.listarProdutos(query);
       if (Array.isArray(data.produtos) && data.produtos.length > 0) {
         return data.produtos;
       }
-      return this.mockProdutos;
+      return this.filtrarMock(busca);
     } catch {
-      return this.mockProdutos;
+      return this.filtrarMock(busca);
     }
   }
 
+  filtrarMock(busca = '') {
+    const termo = busca.trim().toLowerCase();
+    return this.mockProdutos.filter((p) => p.nome.toLowerCase().includes(termo));
+  }
+  
   async criarProduto(produto) {
     try {
       return await api.cadastrarProduto(produto);

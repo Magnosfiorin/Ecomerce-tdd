@@ -8,18 +8,21 @@ export default function Catalogo() {
   const [loading, setLoading] = useState(true);
   const [versaoAB, setVersaoAB] = useState('B'); // 'A' ou 'B' para o teste de usabilidade (Dev 3)
   const [adicionadoId, setAdicionadoId] = useState(null);
+  const [busca, setBusca] = useState('');
   const { adicionarItem } = useCart();
 
-  const carregarProdutos = async () => {
+   const carregarProdutos = async (termo = busca) => {
     setLoading(true);
-    const lista = await databaseService.getProdutos();
+    const lista = await databaseService.getProdutos(termo);
     setProdutos(lista);
     setLoading(false);
   };
 
+  // Recarrega a lista quando o texto da busca muda (com pequena espera ao digitar)
   useEffect(() => {
-    carregarProdutos();
-  }, []);
+    const espera = setTimeout(() => carregarProdutos(busca), 300);
+    return () => clearTimeout(espera);
+  }, [busca]);
 
   const handleComprar = (produto) => {
     adicionarItem(produto, 1);
@@ -59,10 +62,20 @@ export default function Catalogo() {
           <h2>Catálogo de Produtos</h2>
           <p>Explore os itens disponíveis para compra imediata</p>
         </div>
-        <button onClick={carregarProdutos} className="btn btn-secondary btn-icon" title="Recarregar do Banco">
+        <button onClick={() => carregarProdutos(busca)} className="btn btn-secondary btn-icon" title="Recarregar do Banco">
           <RefreshCw size={16} /> Atualizar
         </button>
       </div>
+
+    <input
+        type="search"
+        className="catalogo-busca"
+        placeholder="Buscar produto por nome..."
+        value={busca}
+        onChange={(e) => setBusca(e.target.value)}
+        aria-label="Buscar produto por nome"
+        data-cy="busca-produto"
+      />
 
       {loading ? (
         <div className="loading-state">Carregando catálogo do banco de dados...</div>
