@@ -50,15 +50,15 @@ public class DatabaseConfig {
         // 1. Busca do .env ou variáveis de ambiente do sistema
         String envUrl = firstNonBlank(
                 DotenvLoader.get("DB_URL"),
-                DotenvLoader.get("bd_DATABASE_URL"),
+                // DotenvLoader.get("bd_DATABASE_URL"),
                 DotenvLoader.get("DATABASE_URL"));
         String envUser = firstNonBlank(
                 DotenvLoader.get("DB_USER"),
-                DotenvLoader.get("bd_PGUSER"),
+                // DotenvLoader.get("bd_PGUSER"),
                 DotenvLoader.get("PGUSER"));
         String envPass = firstNonBlank(
                 DotenvLoader.get("DB_PASSWORD"),
-                DotenvLoader.get("bd_PGPASSWORD"),
+                // DotenvLoader.get("bd_PGPASSWORD"),
                 DotenvLoader.get("PGPASSWORD"));
 
         // 2. System Properties ou application.properties com fallback seguro
