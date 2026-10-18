@@ -3,10 +3,10 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { databaseService } from '../services/databaseService';
-import { ShoppingCart, User, Package, Store, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ShoppingCart, User, Package, Store, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
 
 export default function Navbar() {
-  const { usuario, logout, isVendedor } = useAuth();
+  const { usuario, loja, logout, isVendedor, tipoDescricao } = useAuth();
   const { totalItens } = useCart();
   const location = useLocation();
   const [backendStatus, setBackendStatus] = useState({ online: false, database: 'Verificando...' });
@@ -41,9 +41,22 @@ export default function Navbar() {
           </Link>
 
           {isVendedor && (
-            <Link to="/cadastro-produto" className={`nav-link ${isActive('/cadastro-produto') ? 'active' : ''}`}>
-              <Package size={16} />
-              <span>Cadastrar Produto</span>
+            <>
+              <Link to="/dashboard" className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}>
+                <Store size={16} />
+                <span>Minha Loja {loja?.nomeLoja ? `(${loja.nomeLoja})` : ''}</span>
+              </Link>
+              <Link to="/cadastro-produto" className={`nav-link ${isActive('/cadastro-produto') ? 'active' : ''}`}>
+                <Package size={16} />
+                <span>Cadastrar Produto</span>
+              </Link>
+            </>
+          )}
+
+          {/* Atalho para cliente que deseja virar vendedor */}
+          {usuario && usuario.tipoUsuario === 1 && (
+            <Link to="/login" className="btn-nav-vender" title="Crie sua loja no e-commerce">
+              <Sparkles size={14} /> Venha vender com a gente
             </Link>
           )}
 
@@ -59,8 +72,8 @@ export default function Navbar() {
 
           {usuario ? (
             <div className="user-profile">
-              <span className="user-email">
-                <User size={14} /> {usuario.email} ({usuario.perfil})
+              <span className="user-email" title={`ID: ${usuario.id} | ${usuario.email}`}>
+                <User size={14} /> {usuario.nome} ({tipoDescricao})
               </span>
               <button onClick={logout} className="btn-logout">
                 Sair

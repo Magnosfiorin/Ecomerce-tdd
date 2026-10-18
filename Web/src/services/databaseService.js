@@ -1,26 +1,16 @@
 import { api } from './api';
 
-/**
- * Camada de Acesso a Dados (Data Service).
- * 
- * Atua como ponte entre os componentes React e o Banco Externo / Backend.
- * Conta com fallback em memória/localStorage para permitir que os testes
- * de interface e desenvolvimento continuem mesmo com o backend offline.
- */
 class DatabaseService {
   constructor() {
-    this.useMockFallback = true;
     this.mockProdutos = [
       { id: 1, nome: 'Notebook Gamer Pro', preco: 4500.00, estoque: 5 },
       { id: 2, nome: 'Mouse Sem Fio RGB', preco: 150.00, estoque: 20 },
       { id: 3, nome: 'Teclado Mecânico ABNT2', preco: 320.00, estoque: 12 },
       { id: 4, nome: 'Headset 7.1 Surround', preco: 280.00, estoque: 8 },
     ];
+    this.mockUsuarios = [];
   }
 
-  /**
-   * Verifica a conectividade com o banco externo através da rota de saúde.
-   */
   async checkConnection() {
     try {
       const health = await api.getHealth();
@@ -39,21 +29,84 @@ class DatabaseService {
   }
 
   // =========================================================================
-  // Operações de Catálogo e Produtos
+  // Autenticação & Cadastro
   // =========================================================================
 
-  async getProdutos() {
+  async login(email, senha) {
     try {
-      const data = await api.listarProdutos();
-      if (Array.isArray(data.produtos) && data.produtos.length > 0) {
-        return data.produtos;
+      const resp = await api.login(email, senha);
+      return resp;
+    } catch (error) {
+      // Fallback em memória se backend estiver offline
+      const u = this.mockUsuarios.find(
+        (usr) => usr.email.toLowerCase() === email.toLowerCase() && usr.senha === senha
+      );
+      if (u) {
+        return { sucesso: true, usuario: u };
       }
-      return this.mockProdutos;
-    } catch {
-      return this.mockProdutos;
+      throw error;
     }
   }
 
+  async cadastrarCliente(dados) {
+    try {
+      return await api.cadastrarCliente(dados);
+    } catch (error) {
+      const novo = { id: Date.now(), ...dados, tipoUsuario: 1 };
+      this.mockUsuarios.push(novo);
+      return { sucesso: true, usuario: novo, mensagem: 'Cadastrado via mock' };
+    }
+  }
+
+  async cadastrarVendedor(usuario, loja) {
+    try {
+      return await api.cadastrarVendedor(usuario, loja);
+    } catch (error) {
+      const novoUsuario = { id: Date.now(), ...usuario, tipoUsuario: 0 };
+      const novaLoja = { id: Date.now() + 1, usuarioId: novoUsuario.id, ...loja };
+      this.mockUsuarios.push(novoUsuario);
+      return { sucesso: true, usuario: novoUsuario, loja: novaLoja, mensagem: 'Cadastrado via mock' };
+    }
+  }
+
+  async criarLojaParaCliente(usuarioId, dadosLoja) {
+    try {
+      return await api.criarLojaParaCliente(usuarioId, dadosLoja);
+    } catch (error) {
+      const u = this.mockUsuarios.find((usr) => usr.id === usuarioId);
+      if (u) {
+        u.tipoUsuario = 2;
+      }
+      return {
+        sucesso: true,
+        loja: { id: Date.now(), usuarioId, ...dadosLoja },
+        novoTipoUsuario: 2,
+      };
+    }
+  }
+
+  // =========================================================================
+  // Produtos & Catálogo
+  // =========================================================================
+
+  async getProdutos(busca = '') {
+    try {
+      const query = busca.trim() ? `?busca=${encodeURIComponent(busca.trim())}` : '';
+      const data = await api.listarProdutos(query);
+      if (Array.isArray(data.produtos) && data.produtos.length > 0) {
+        return data.produtos;
+      }
+      return this.filtrarMock(busca);
+    } catch {
+      return this.filtrarMock(busca);
+    }
+  }
+
+  filtrarMock(busca = '') {
+    const termo = busca.trim().toLowerCase();
+    return this.mockProdutos.filter((p) => p.nome.toLowerCase().includes(termo));
+  }
+  
   async criarProduto(produto) {
     try {
       return await api.cadastrarProduto(produto);
@@ -65,24 +118,7 @@ class DatabaseService {
   }
 
   // =========================================================================
-  // Operações de Autenticação
-  // =========================================================================
-
-  async autenticar(email, senha, perfil) {
-    try {
-      return await api.login(email, senha, perfil);
-    } catch {
-      // Mock para desenvolvimento isolado
-      return {
-        sucesso: true,
-        usuario: { email, perfil: perfil || 'CLIENTE' },
-        mensagem: 'Login realizado via mock de desenvolvimento',
-      };
-    }
-  }
-
-  // =========================================================================
-  // Operações de Checkout
+  // Checkout
   // =========================================================================
 
   async processarCheckout(pedido) {
