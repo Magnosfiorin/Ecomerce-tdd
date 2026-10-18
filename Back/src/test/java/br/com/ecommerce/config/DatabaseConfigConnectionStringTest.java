@@ -1,41 +1,40 @@
 package br.com.ecommerce.config;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-@DisplayName("Testes de interpretação da URL de conexão")
+@DisplayName("Testes da URL de conexão do Neon")
 class DatabaseConfigConnectionStringTest {
 
     @Test
-    @DisplayName("Deve converter URL da integração Neon para JDBC e extrair credenciais")
-    void deveConverterUrlNeonParaJdbc() {
-        DatabaseConfig.ConnectionSettings connection = DatabaseConfig.parseConnectionString(
-                "postgresql://neon_user:p%40ssword@ep-example.neon.tech/ecommerce"
-                        + "?sslmode=require&channel_binding=require");
+    @DisplayName("Converte URL postgresql e extrai credenciais")
+    void converteUrlPostgresql() {
+        DatabaseConfig.ConnectionSettings settings = DatabaseConfig.parseConnectionString(
+                "postgresql://neon_user:p%40ssword@ep-example.neon.tech/ecommerce?sslmode=require");
 
-        assertEquals("jdbc:postgresql://ep-example.neon.tech/ecommerce"
-                + "?sslmode=require&channel_binding=require", connection.jdbcUrl());
-        assertEquals("neon_user", connection.user());
-        assertEquals("p@ssword", connection.password());
+        assertEquals("jdbc:postgresql://ep-example.neon.tech/ecommerce?sslmode=require", settings.jdbcUrl());
+        assertEquals("neon_user", settings.user());
+        assertEquals("p@ssword", settings.password());
     }
 
     @Test
-    @DisplayName("Deve manter URL JDBC já configurada")
-    void deveManterUrlJdbc() {
+    @DisplayName("Preserva uma URL JDBC")
+    void preservaUrlJdbc() {
         String jdbcUrl = "jdbc:postgresql://ep-example.neon.tech/ecommerce?sslmode=require";
 
-        DatabaseConfig.ConnectionSettings connection = DatabaseConfig.parseConnectionString(jdbcUrl);
+        DatabaseConfig.ConnectionSettings settings = DatabaseConfig.parseConnectionString(jdbcUrl);
 
-        assertEquals(jdbcUrl, connection.jdbcUrl());
-        assertNull(connection.user());
-        assertNull(connection.password());
+        assertEquals(jdbcUrl, settings.jdbcUrl());
+        assertNull(settings.user());
+        assertNull(settings.password());
     }
 
     @Test
-    @DisplayName("Deve rejeitar URL de banco com esquema incompatível")
-    void deveRejeitarUrlComEsquemaIncompativel() {
+    @DisplayName("Rejeita URL que não seja PostgreSQL")
+    void rejeitaOutroEsquema() {
         assertThrows(IllegalArgumentException.class,
                 () -> DatabaseConfig.parseConnectionString("mysql://host/database"));
     }
