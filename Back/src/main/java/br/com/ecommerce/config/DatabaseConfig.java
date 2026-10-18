@@ -187,6 +187,12 @@ public class DatabaseConfig {
      * Testa se o banco de dados local/externo está acessível com as credenciais atuais.
      */
     public boolean testConnection() {
+        if (url == null || url.isBlank()) {
+            System.err.println(
+                    "[DatabaseConfig] URL do PostgreSQL não configurada. Defina DATABASE_URL ou DB_URL no ambiente do backend.");
+            return false;
+        }
+
         try (Connection conn = getConnection()) {
             return conn != null && !conn.isClosed();
         } catch (SQLException e) {

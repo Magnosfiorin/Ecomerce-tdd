@@ -44,4 +44,12 @@ public class DatabaseConfigTest {
 
         assertFalse(configInvalido.testConnection(), "Não deve conectar em porta ou host inválido");
     }
+
+    @Test
+    @DisplayName("Deve retornar false sem chamar o driver quando a URL não está configurada")
+    void deveRetornarFalseQuandoUrlNaoConfigurada() {
+        DatabaseConfig configSemUrl = new DatabaseConfig(null, null, null);
+
+        assertFalse(configSemUrl.testConnection());
+    }
 }
