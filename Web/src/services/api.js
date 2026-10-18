@@ -4,7 +4,10 @@
  * Gerencia as chamadas HTTP para o backend Java (porta 8080).
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const DEFAULT_API_BASE_URL = import.meta.env.PROD
+  ? 'https://ecomerce-tdd-back.vercel.app/api'
+  : 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL;
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
