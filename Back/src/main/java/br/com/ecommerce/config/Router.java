@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import br.com.ecommerce.service.UsuarioService;
+import br.com.ecommerce.service.CatalogoService;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -31,9 +32,12 @@ public class Router implements HttpHandler {
 
     private final UsuarioService usuarioService;
 
+    private final CatalogoService catalogoService;
+
     public Router(DatabaseConfig databaseConfig) {
         this.databaseConfig = databaseConfig;
         this.usuarioService = new UsuarioService(databaseConfig);
+        this.catalogoService = new CatalogoService(databaseConfig);
         registerDefaultRoutes();
     }
 
@@ -183,10 +187,12 @@ public class Router implements HttpHandler {
         });
 
         // Dev 3: Módulo Catálogo (Cliente)
+        // GET /api/produtos            -> lista produtos ativos
+        // GET /api/produtos?busca=foo  -> filtra por nome
         register("GET", "/api/produtos", exchange -> {
+            String busca = extrairParametro(exchange.getRequestURI().getQuery(), "busca");
             Map<String, Object> response = new HashMap<>();
-            response.put("mensagem", "Endpoint de Catálogo pronto para implementação do Dev 3");
-            response.put("produtos", new Object[]{});
+            response.put("produtos", catalogoService.buscarPorNome(busca));
             sendJsonResponse(exchange, 200, response);
         });
 
@@ -235,6 +241,25 @@ public class Router implements HttpHandler {
         } else {
             sendError(exchange, 404, "Rota não encontrada: " + method + " " + path);
         }
+    }
+
+    /**
+     * Le um parametro da query string (ex.: "busca=camiseta&x=1"). Retorna null
+     * se ausente.
+     */
+    private static String extrairParametro(String query, String nome) {
+        if (query == null || query.isEmpty()) {
+            return null;
+        }
+        for (String par : query.split("&")) {
+            String[] kv = par.split("=", 2);
+            if (kv[0].equals(nome)) {
+                return kv.length > 1
+                        ? java.net.URLDecoder.decode(kv[1], StandardCharsets.UTF_8)
+                        : "";
+            }
+        }
+        return null;
     }
 
     private String buildKey(String method, String path) {

@@ -1,4 +1,4 @@
--- ===================================================================
+    -- ===================================================================
 -- Esquema de Banco de Dados E-Commerce TDD (PostgreSQL)
 -- ===================================================================
 
@@ -67,11 +67,13 @@ CREATE TABLE IF NOT EXISTS produtos (
     nome VARCHAR(150) NOT NULL,
     preco NUMERIC(10, 2) NOT NULL,
     estoque INTEGER NOT NULL DEFAULT 0,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 ALTER TABLE produtos ADD COLUMN IF NOT EXISTS loja_id INT REFERENCES lojas(id) ON DELETE SET NULL;
 ALTER TABLE produtos ADD COLUMN IF NOT EXISTS usuario_id INT REFERENCES usuarios(id) ON DELETE CASCADE;
+ALTER TABLE produtos ADD COLUMN IF NOT EXISTS ativo BOOLEAN NOT NULL DEFAULT TRUE;
 
 -- 4. Tabela de Pedidos
 CREATE TABLE IF NOT EXISTS pedidos (
