@@ -5,6 +5,10 @@ import com.google.gson.GsonBuilder;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
+import br.com.ecommerce.controller.ProdutoController;
+import br.com.ecommerce.repository.ProdutoRepositoryJdbc;
+import br.com.ecommerce.service.ProdutoService;
+
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -14,7 +18,8 @@ import java.util.Map;
 
 /**
  * Centralizador de Rotas HTTP da aplicação E-Commerce.
- * Gerencia mapeamento de endpoints, suporte a CORS, serialização/deserialização JSON
+ * Gerencia mapeamento de endpoints, suporte a CORS, serialização/deserialização
+ * JSON
  * e códigos de resposta padronizados.
  */
 public class Router implements HttpHandler {
@@ -43,7 +48,8 @@ public class Router implements HttpHandler {
 
     /**
      * Centralização de todas as rotas do E-Commerce.
-     * Serve como ponto único onde cada integrante (Dev 1 a 5) acopla seus controladores.
+     * Serve como ponto único onde cada integrante (Dev 1 a 5) acopla seus
+     * controladores.
      */
     private void registerDefaultRoutes() {
         // Rota de Health Check / Status da API e Banco de Dados
@@ -66,18 +72,15 @@ public class Router implements HttpHandler {
         });
 
         // Dev 2: Módulo Cadastro de Produtos (Vendedor)
-        register("POST", "/api/produtos", exchange -> {
-            Map<String, Object> response = new HashMap<>();
-            response.put("mensagem", "Endpoint de Cadastro de Produtos pronto para implementação do Dev 2");
-            response.put("modulo", "Cadastro de Produtos");
-            sendJsonResponse(exchange, 201, response);
-        });
+        ProdutoController produtoController = new ProdutoController(
+                new ProdutoService(new ProdutoRepositoryJdbc(databaseConfig)));
+        register("POST", "/api/produtos", produtoController::cadastrar);
 
         // Dev 3: Módulo Catálogo (Cliente)
         register("GET", "/api/produtos", exchange -> {
             Map<String, Object> response = new HashMap<>();
             response.put("mensagem", "Endpoint de Catálogo pronto para implementação do Dev 3");
-            response.put("produtos", new Object[]{});
+            response.put("produtos", new Object[] {});
             sendJsonResponse(exchange, 200, response);
         });
 
@@ -133,7 +136,8 @@ public class Router implements HttpHandler {
     }
 
     private String normalizePath(String path) {
-        if (path == null || path.isEmpty()) return "/";
+        if (path == null || path.isEmpty())
+            return "/";
         if (path.length() > 1 && path.endsWith("/")) {
             return path.substring(0, path.length() - 1);
         }
