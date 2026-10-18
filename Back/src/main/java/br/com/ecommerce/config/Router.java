@@ -91,7 +91,7 @@ public class Router implements HttpHandler {
                 if (usuario != null) {
                     Map<String, Object> resp = new HashMap<>();
                     resp.put("sucesso", true);
-                    resp.put("usuario", usuario);
+                    resp.put("usuario", usuarioSemSenha(usuario));
                     br.com.ecommerce.model.Loja loja = usuarioService.buscarLojaPorUsuario(usuario.getId());
                     if (loja != null) {
                         resp.put("loja", loja);
@@ -118,7 +118,7 @@ public class Router implements HttpHandler {
                 Map<String, Object> resp = new HashMap<>();
                 resp.put("sucesso", true);
                 resp.put("mensagem", "Cliente cadastrado com sucesso!");
-                resp.put("usuario", salvo);
+                resp.put("usuario", usuarioSemSenha(salvo));
                 sendJsonResponse(exchange, 201, resp);
             } catch (IllegalArgumentException e) {
                 sendError(exchange, 400, e.getMessage());
@@ -147,7 +147,7 @@ public class Router implements HttpHandler {
                 Map<String, Object> resp = new HashMap<>();
                 resp.put("sucesso", true);
                 resp.put("mensagem", "Vendedor e loja cadastrados com sucesso!");
-                resp.put("usuario", vendedorSalvo);
+                resp.put("usuario", usuarioSemSenha(vendedorSalvo));
                 resp.put("loja", loja);
                 sendJsonResponse(exchange, 201, resp);
             } catch (IllegalArgumentException e) {
@@ -326,6 +326,28 @@ public class Router implements HttpHandler {
         error.put("status", statusCode);
         error.put("erro", message);
         sendJsonResponse(exchange, statusCode, error);
+    }
+
+    public int migrarSenhasLegadas() {
+        return usuarioService.migrarSenhasLegadas();
+    }
+
+    private Map<String, Object> usuarioSemSenha(br.com.ecommerce.model.Usuario usuario) {
+        Map<String, Object> dados = new HashMap<>();
+        dados.put("id", usuario.getId());
+        dados.put("nome", usuario.getNome());
+        dados.put("sobrenome", usuario.getSobrenome());
+        dados.put("email", usuario.getEmail());
+        dados.put("cpf", usuario.getCpf());
+        dados.put("cep", usuario.getCep());
+        dados.put("endereco", usuario.getEndereco());
+        dados.put("numero", usuario.getNumero());
+        dados.put("bairro", usuario.getBairro());
+        dados.put("cidade", usuario.getCidade());
+        dados.put("estado", usuario.getEstado());
+        dados.put("pais", usuario.getPais());
+        dados.put("tipoUsuario", usuario.getTipoUsuario());
+        return dados;
     }
 
     public Map<String, RouteHandler> getRoutes() {

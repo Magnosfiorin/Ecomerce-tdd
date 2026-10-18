@@ -63,21 +63,23 @@ public class EcommerceApplication {
      * Inicia o servidor HTTP e inicializa a conexão com o banco de dados.
      */
     public void start() throws IOException {
+        // Verificação do Banco de Dados Externo
+        if (databaseConfig.testConnection()) {
+            System.out.println("[PostgreSQL] Conexão com banco externo estabelecida com sucesso!");
+            databaseConfig.initializeTables();
+            int senhasMigradas = router.migrarSenhasLegadas();
+            System.out.println("[PostgreSQL] Senhas antigas convertidas para BCrypt: " + senhasMigradas);
+        } else {
+            System.out.println("[PostgreSQL] Banco externo offline ou não configurado.");
+            System.out.println("             Configure as variáveis DB_URL, DB_USER e DB_PASSWORD caso vá persistir dados.");
+        }
+
         server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/", router);
         server.setExecutor(Executors.newFixedThreadPool(10));
         server.start();
 
         printStartupBanner();
-
-        // Verificação do Banco de Dados Externo
-        if (databaseConfig.testConnection()) {
-            System.out.println("[PostgreSQL] Conexão com banco externo estabelecida com sucesso!");
-            databaseConfig.initializeTables();
-        } else {
-            System.out.println("[PostgreSQL] Banco externo offline ou não configurado.");
-            System.out.println("             Configure as variáveis DB_URL, DB_USER e DB_PASSWORD caso vá persistir dados.");
-        }
     }
 
     /**
