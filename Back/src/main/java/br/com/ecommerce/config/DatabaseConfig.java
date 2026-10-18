@@ -1,6 +1,8 @@
 package br.com.ecommerce.config;
 
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -29,11 +31,10 @@ public class DatabaseConfig {
     }
 
     /**
-     * Carrega as configurações priorizando o arquivo .env / Variáveis de Ambiente,
-     * depois System Properties, e por fim application.properties.
+     * Carrega primeiro as variáveis reconhecidas pela integração Neon/Vercel,
+     * mantendo DB_* como opção para configuração manual.
      */
     private void loadConfiguration() {
-        // Carrega o arquivo .env na raiz do projeto caso exista
         DotenvLoader.load();
 
         Properties properties = new Properties();
@@ -45,20 +46,101 @@ public class DatabaseConfig {
             System.err.println("[DatabaseConfig] Aviso: Não foi possível ler application.properties: " + e.getMessage());
         }
 
-        // 1. Busca do .env ou variáveis de ambiente do sistema
-        String envUrl = DotenvLoader.get("DB_URL");
-        String envUser = DotenvLoader.get("DB_USER");
-        String envPass = DotenvLoader.get("DB_PASSWORD");
+        String envUrl = firstNonBlank(
+                DotenvLoader.get("DB_URL"),
+                DotenvLoader.get("DATABASE_URL"),
+                DotenvLoader.get("DATABASE_URL_UNPOOLED"),
+                DotenvLoader.get("POSTGRES_URL"),
+                DotenvLoader.get("POSTGRES_URL_NON_POOLING"));
+        String envUser = firstNonBlank(
+                DotenvLoader.get("DB_USER"),
+                DotenvLoader.get("PGUSER"),
+                DotenvLoader.get("POSTGRES_USER"));
+        String envPass = firstNonBlank(
+                DotenvLoader.get("DB_PASSWORD"),
+                DotenvLoader.get("PGPASSWORD"),
+                DotenvLoader.get("POSTGRES_PASSWORD"));
 
-        // 2. System Properties ou application.properties com fallback seguro
-        String propUrl = System.getProperty("db.url", properties.getProperty("db.url", "jdbc:postgresql://localhost:5432/ecommerce"));
+        if (envUrl == null) {
+            String host = firstNonBlank(DotenvLoader.get("PGHOST"), DotenvLoader.get("POSTGRES_HOST"));
+            String database = firstNonBlank(DotenvLoader.get("PGDATABASE"), DotenvLoader.get("POSTGRES_DATABASE"));
+            if (host != null && database != null) {
+                String port = firstNonBlank(DotenvLoader.get("PGPORT"), "5432");
+                envUrl = "jdbc:postgresql://" + host + ":" + port + "/" + database + "?sslmode=require";
+            }
+        }
+
+        String vercelDeployment = DotenvLoader.get("VERCEL");
+        boolean runningOnVercel = vercelDeployment != null
+                && !vercelDeployment.isBlank()
+                && !"0".equals(vercelDeployment)
+                && !"false".equalsIgnoreCase(vercelDeployment);
+        if (runningOnVercel && envUrl == null) {
+            throw new IllegalStateException(
+                    "Configuração do Neon ausente. Configure DATABASE_URL ou as variáveis PGHOST, PGDATABASE, PGUSER e PGPASSWORD no projeto Backend da Vercel.");
+        }
+
+        String propUrl = System.getProperty("db.url",
+                properties.getProperty("db.url", "jdbc:postgresql://localhost:5432/ecommerce"));
         String propUser = System.getProperty("db.user", properties.getProperty("db.user", "postgres"));
         String propPass = System.getProperty("db.password", properties.getProperty("db.password", "postgres"));
 
-        this.url = (envUrl != null && !envUrl.isBlank()) ? envUrl : propUrl;
-        this.user = (envUser != null && !envUser.isBlank()) ? envUser : propUser;
-        this.password = (envPass != null && !envPass.isBlank()) ? envPass : propPass;
+        ConnectionSettings connection = envUrl == null
+                ? new ConnectionSettings(propUrl, null, null)
+                : parseConnectionString(envUrl);
+        this.url = connection.jdbcUrl();
+        this.user = firstNonBlank(envUser, connection.user(), propUser);
+        this.password = firstNonBlank(envPass, connection.password(), propPass);
+
+        if (runningOnVercel && (envUser == null && connection.user() == null
+                || envPass == null && connection.password() == null)) {
+            throw new IllegalStateException(
+                    "Credenciais do Neon ausentes. Configure DATABASE_URL com usuário e senha ou as variáveis PGUSER e PGPASSWORD no projeto Backend da Vercel.");
+        }
     }
+
+    static ConnectionSettings parseConnectionString(String connectionString) {
+        if (connectionString.startsWith("jdbc:postgresql:")) {
+            return new ConnectionSettings(connectionString, null, null);
+        }
+
+        try {
+            URI uri = new URI(connectionString);
+            String scheme = uri.getScheme();
+            if (!"postgres".equalsIgnoreCase(scheme) && !"postgresql".equalsIgnoreCase(scheme)) {
+                throw new IllegalArgumentException("Esquema de conexão PostgreSQL inválido.");
+            }
+            if (uri.getHost() == null || uri.getPath() == null || uri.getPath().length() < 2) {
+                throw new IllegalArgumentException("A URL do PostgreSQL deve incluir host e nome do banco.");
+            }
+
+            String jdbcUrl = "jdbc:postgresql://" + uri.getRawAuthority().substring(
+                    uri.getRawUserInfo() == null ? 0 : uri.getRawUserInfo().length() + 1)
+                    + uri.getRawPath()
+                    + (uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery());
+            String user = null;
+            String password = null;
+            if (uri.getUserInfo() != null) {
+                int separator = uri.getUserInfo().indexOf(':');
+                user = separator < 0 ? uri.getUserInfo() : uri.getUserInfo().substring(0, separator);
+                password = separator < 0 ? null : uri.getUserInfo().substring(separator + 1);
+            }
+            return new ConnectionSettings(jdbcUrl, user, password);
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("A URL de conexão PostgreSQL é inválida.", e);
+        }
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    record ConnectionSettings(String jdbcUrl, String user, String password) {}
 
     public String getUrl() {
         return url;
@@ -98,7 +180,7 @@ public class DatabaseConfig {
         try (Connection conn = getConnection()) {
             return conn != null && !conn.isClosed();
         } catch (SQLException e) {
-            System.err.println("[DatabaseConfig] Não foi possível conectar ao PostgreSQL (" + this.url + "): " + e.getMessage());
+            System.err.println("[DatabaseConfig] Não foi possível conectar ao PostgreSQL: " + e.getMessage());
             return false;
         }
     }
