@@ -101,6 +101,8 @@ public class EcommerceApplicationTest {
         HttpResponse<String> respCadastro = httpClient.send(postCadastro, HttpResponse.BodyHandlers.ofString());
         assertEquals(201, respCadastro.statusCode());
         assertTrue(respCadastro.body().contains("Cliente cadastrado com sucesso!"));
+        assertFalse(respCadastro.body().contains("\"senha\""));
+        assertFalse(respCadastro.body().contains("senhaSegura123"));
 
         // 2. Realiza Login com credenciais válidas e verifica identificação do perfil (tipo 1)
         String loginJson = """
@@ -121,6 +123,8 @@ public class EcommerceApplicationTest {
         assertTrue(respLogin.body().contains("\"sucesso\": true"));
         assertTrue(respLogin.body().contains("\"tipoUsuario\": 1"));
         assertTrue(respLogin.body().contains("\"nome\": \"Rodrigo\""));
+        assertFalse(respLogin.body().contains("\"senha\""));
+        assertFalse(respLogin.body().contains("senhaSegura123"));
     }
 
     @Test

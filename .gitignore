@@ -16,3 +16,6 @@ Web/cypress/screenshots/
 # Environment / Temp
 .env
 *.log
+
+.vercel
+.env*

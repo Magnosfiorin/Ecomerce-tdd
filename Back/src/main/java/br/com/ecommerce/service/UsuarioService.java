@@ -32,6 +32,8 @@ public class UsuarioService {
      * - E-mail e senha são obrigatórios.
      * - O e-mail deve possuir formato válido (RFC / Regex).
      * - A senha deve possuir no mínimo 4 caracteres.
+     *
+     * A verificação da senha é feita via BCrypt (hash), nunca por comparação direta no SQL.
      */
     public Usuario autenticar(String email, String senha) {
         if (email == null || email.isBlank() || senha == null || senha.isBlank()) {
@@ -47,15 +49,19 @@ public class UsuarioService {
         }
 
         if (databaseConfig != null && databaseConfig.testConnection()) {
+            // Busca o usuário APENAS pelo e-mail — a verificação da senha é feita em memória via BCrypt
             String sql = "SELECT id, nome, sobrenome, email, senha, cpf, cep, endereco, numero, bairro, cidade, estado, pais, tipo_usuario " +
-                         "FROM usuarios WHERE LOWER(email) = LOWER(?) AND senha = ?";
+                         "FROM usuarios WHERE LOWER(email) = LOWER(?)";
             try (Connection conn = databaseConfig.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, email.trim());
-                stmt.setString(2, senha.trim());
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) {
-                        return mapearUsuario(rs);
+                        String hashArmazenado = rs.getString("senha");
+                        if (SenhaUtils.verificarSenha(senha.trim(), hashArmazenado)) {
+                            Usuario usuario = mapearUsuario(rs);
+                            return usuario;
+                        }
                     }
                 }
             } catch (SQLException e) {
@@ -65,17 +71,71 @@ public class UsuarioService {
 
         // Fallback em memória
         return mockUsuarios.stream()
-                .filter(u -> u.getEmail().equalsIgnoreCase(email.trim()) && u.getSenha().equals(senha.trim()))
+                .filter(u -> u.getEmail().equalsIgnoreCase(email.trim())
+                           && SenhaUtils.verificarSenha(senha.trim(), u.getSenha()))
                 .findFirst()
                 .orElse(null);
     }
 
     /**
+     * Converte senhas antigas em texto puro para hashes BCrypt durante a inicialização.
+     */
+    public int migrarSenhasLegadas() {
+        if (databaseConfig == null) {
+            return 0;
+        }
+
+        String selectSql = "SELECT id, senha FROM usuarios";
+        String updateSql = "UPDATE usuarios SET senha = ? WHERE id = ?";
+        try (Connection conn = databaseConfig.getConnection()) {
+            boolean autoCommitOriginal = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+            try {
+                List<Integer> ids = new ArrayList<>();
+                List<String> hashes = new ArrayList<>();
+                try (PreparedStatement select = conn.prepareStatement(selectSql);
+                     ResultSet rs = select.executeQuery()) {
+                    while (rs.next()) {
+                        String senhaArmazenada = rs.getString("senha");
+                        if (!SenhaUtils.isHashBCrypt(senhaArmazenada)) {
+                            ids.add(rs.getInt("id"));
+                            hashes.add(SenhaUtils.hashSenha(senhaArmazenada));
+                        }
+                    }
+                }
+
+                try (PreparedStatement update = conn.prepareStatement(updateSql)) {
+                    for (int i = 0; i < ids.size(); i++) {
+                        update.setString(1, hashes.get(i));
+                        update.setInt(2, ids.get(i));
+                        update.addBatch();
+                    }
+                    update.executeBatch();
+                }
+                conn.commit();
+                return ids.size();
+            } catch (SQLException | RuntimeException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(autoCommitOriginal);
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Não foi possível migrar senhas antigas para BCrypt.", e);
+        }
+    }
+
+    /**
      * Cadastra um novo cliente (tipo 1).
+     * A senha é hasheada com BCrypt antes de ser persistida.
      */
     public Usuario cadastrarCliente(Usuario usuario) {
         validarDadosUsuario(usuario);
         usuario.setTipoUsuario(Usuario.TIPO_CLIENTE);
+
+        // Hashear a senha antes de persistir
+        String senhaOriginal = usuario.getSenha();
+        usuario.setSenha(SenhaUtils.hashSenha(senhaOriginal));
 
         if (databaseConfig != null && databaseConfig.testConnection()) {
             String sql = "INSERT INTO usuarios (nome, sobrenome, email, senha, cpf, cep, endereco, numero, bairro, cidade, estado, pais, tipo_usuario) " +
@@ -107,11 +167,16 @@ public class UsuarioService {
 
     /**
      * Cadastra um vendedor (tipo 0) e sua respectiva loja vinculada.
+     * A senha é hasheada com BCrypt antes de ser persistida.
      */
     public Usuario cadastrarVendedorComLoja(Usuario usuario, Loja loja) {
         validarDadosUsuario(usuario);
         validarDadosLoja(loja);
         usuario.setTipoUsuario(Usuario.TIPO_VENDEDOR);
+
+        // Hashear a senha antes de persistir
+        String senhaOriginal = usuario.getSenha();
+        usuario.setSenha(SenhaUtils.hashSenha(senhaOriginal));
 
         if (databaseConfig != null && databaseConfig.testConnection()) {
             String sqlUsuario = "INSERT INTO usuarios (nome, sobrenome, email, senha, cpf, cep, endereco, numero, bairro, cidade, estado, pais, tipo_usuario) " +
