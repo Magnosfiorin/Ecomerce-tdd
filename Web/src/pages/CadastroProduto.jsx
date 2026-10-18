@@ -14,7 +14,7 @@ export default function CadastroProduto() {
     setMensagem({ tipo: '', texto: '' });
 
     const valorPreco = parseFloat(preco);
-    const qtdEstoque = parseInt(estoque, 10);
+    const qtdEstoque = Number(estoque);
 
     // Requisitos de validação do Dev 2
     if (!nome.trim()) {
@@ -23,12 +23,12 @@ export default function CadastroProduto() {
     }
 
     if (isNaN(valorPreco) || valorPreco <= 0) {
-      setMensagem({ tipo: 'error', texto: 'O preço deve ser um valor positivo maior que zero (Requisito Dev 2).' });
+      setMensagem({ tipo: 'error', texto: 'O preço deve ser um valor positivo maior que zero.' });
       return;
     }
 
-    if (isNaN(qtdEstoque) || qtdEstoque < 0) {
-      setMensagem({ tipo: 'error', texto: 'O estoque deve ser um número inteiro maior ou igual a zero (Requisito Dev 2).' });
+    if (estoque.trim() === '' || !Number.isInteger(qtdEstoque) || qtdEstoque < 0) {
+      setMensagem({ tipo: 'error', texto: 'O estoque deve ser um número inteiro maior ou igual a zero.' });
       return;
     }
 
