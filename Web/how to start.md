@@ -18,11 +18,32 @@ Dê um duplo clique ou execute no terminal:
 cd Web
 npm run cypress:run
 ```
+
+O teste E2E cria um cliente e um produto pela API e conclui uma compra. Mantenha o backend
+na porta 8080 com um PostgreSQL de teste configurado; os dados de pedido permanecem nesse banco.
+Para usar outra URL da API, defina `CYPRESS_API_URL` no Cypress e configure `Cypress.env('apiUrl')`
+no `cypress.config.js`.
+
 ### ou interativo:
 ```
 npm run cypress:open
 ```
 Ambos os projetos (Back na porta 8080 e Web na porta 3000) estão prontos, integrados e configurados para o fluxo de TDD dos 5 integrantes!
+
+## Teste de Performance da rota de produtos (JMeter)
+
+Com o backend e o PostgreSQL de teste em execução:
+
+```sh
+jmeter -n -t Web/jmeter/produtos.jmx -l resultados-jmeter.jtl -e -o relatorio-jmeter
+```
+
+O cenário simula 20 usuários concorrentes por 60 segundos e valida HTTP 200 e a propriedade
+`produtos` na resposta. O relatório HTML inclui o percentil 95. Para apontar para outra API:
+
+```sh
+jmeter -n -t Web/jmeter/produtos.jmx -Japi_host=localhost -Japi_port=8080 -Japi_protocol=http -l resultados-jmeter.jtl -e -o relatorio-jmeter
+```
 
 ## Deploy do frontend na Vercel
 
