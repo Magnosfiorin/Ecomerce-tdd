@@ -191,7 +191,7 @@ export default function Login() {
     try {
       setLoading(true);
       const resultado = await databaseService.login(loginEmail, loginSenha);
-      login(resultado.usuario, resultado.loja);
+      login(resultado.usuario, resultado.loja, resultado.token);
       setSucesso(`Bem-vindo de volta, ${resultado.usuario.nome}!`);
       setTimeout(() => {
         if (resultado.usuario.tipoUsuario === 0 || resultado.usuario.tipoUsuario === 2) {
@@ -252,7 +252,7 @@ export default function Login() {
         pais: pais.trim() || 'Brasil',
       });
 
-      login(resultado.usuario);
+      login(resultado.usuario, null, resultado.token);
       setSucesso('Conta de cliente criada com sucesso!');
       setTimeout(() => navigate('/'), 1000);
     } catch (err) {

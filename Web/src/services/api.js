@@ -107,9 +107,12 @@ export const api = {
     });
   },
 
-  async finalizarCheckout(dadosPedido) {
+  async finalizarCheckout(dadosPedido, token) {
     return request('/checkout', {
       method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify(dadosPedido),
     });
   },
