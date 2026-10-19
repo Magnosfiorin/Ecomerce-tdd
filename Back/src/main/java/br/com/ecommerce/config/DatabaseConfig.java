@@ -252,8 +252,15 @@ public class DatabaseConfig {
                 usuario_id INT REFERENCES usuarios(id),
                 data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 total NUMERIC(10, 2) NOT NULL,
-                status VARCHAR(30) NOT NULL DEFAULT 'PENDENTE'
+                status VARCHAR(30) NOT NULL DEFAULT 'PENDENTE',
+                nome_destinatario VARCHAR(200) NOT NULL DEFAULT '',
+                endereco_entrega VARCHAR(300) NOT NULL DEFAULT '',
+                metodo_pagamento VARCHAR(30) NOT NULL DEFAULT ''
             );
+
+            ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS nome_destinatario VARCHAR(200) NOT NULL DEFAULT '';
+            ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS endereco_entrega VARCHAR(300) NOT NULL DEFAULT '';
+            ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS metodo_pagamento VARCHAR(30) NOT NULL DEFAULT '';
 
             CREATE TABLE IF NOT EXISTS itens_pedido (
                 id SERIAL PRIMARY KEY,

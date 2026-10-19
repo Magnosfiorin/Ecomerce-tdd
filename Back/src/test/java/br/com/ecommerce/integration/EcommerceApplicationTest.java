@@ -122,6 +122,7 @@ public class EcommerceApplicationTest {
         assertEquals(200, respLogin.statusCode());
         assertTrue(respLogin.body().contains("\"sucesso\": true"));
         assertTrue(respLogin.body().contains("\"tipoUsuario\": 1"));
+        assertTrue(respLogin.body().contains("\"token\":"));
         assertTrue(respLogin.body().contains("\"nome\": \"Rodrigo\""));
         assertFalse(respLogin.body().contains("\"senha\""));
         assertFalse(respLogin.body().contains("senhaSegura123"));
@@ -146,6 +147,28 @@ public class EcommerceApplicationTest {
         HttpResponse<String> response = httpClient.send(postLogin, HttpResponse.BodyHandlers.ofString());
         assertEquals(401, response.statusCode());
         assertTrue(response.body().contains("E-mail ou senha incorretos."));
+    }
+
+    @Test
+    @DisplayName("Checkout HTTP: rejeitar requisição sem token de sessão")
+    void deveRejeitarCheckoutSemAutenticacaoViaHttp() throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/api/checkout"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("""
+                        {
+                          "nome": "Cliente",
+                          "endereco": "Rua A, 10",
+                          "metodoPagamento": "PIX",
+                          "itens": [{"produtoId": 1, "quantidade": 1}]
+                        }
+                        """))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(401, response.statusCode());
+        assertTrue(response.body().contains("Sessão inválida ou expirada"));
     }
 
     @Test

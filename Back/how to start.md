@@ -19,6 +19,37 @@ cd Back
 .\mvnw.cmd test
 ```
 
+### Checkout
+
+`POST /api/checkout` recebe o usuário, os dados de entrega/pagamento e os itens do carrinho:
+envie o token Bearer retornado pelo login ou cadastro de cliente no cabeçalho `Authorization`.
+O token expira em 8 horas e as sessões são mantidas em memória; reiniciar o backend encerra as sessões ativas.
+
+```json
+{
+  "nome": "Cliente",
+  "endereco": "Rua A, 10",
+  "metodoPagamento": "PIX",
+  "itens": [
+    { "produtoId": 3, "quantidade": 2 }
+  ]
+}
+```
+
+O preço e o total são lidos/calculados no backend. Pedido, itens e baixa de estoque são
+confirmados na mesma transação PostgreSQL; em caso de erro, a transação é revertida.
+O status persistido e retornado é `CONCLUÍDO`.
+
+O teste que acessa um PostgreSQL real é opt-in e deve usar um banco descartável:
+
+```powershell
+$env:RUN_POSTGRES_CHECKOUT_TESTS = "true"
+$env:CHECKOUT_TEST_DB_URL = "jdbc:postgresql://localhost:5432/ecommerce_test"
+$env:CHECKOUT_TEST_DB_USER = "postgres"
+$env:CHECKOUT_TEST_DB_PASSWORD = "sua-senha"
+.\mvnw.cmd test
+```
+
 Ao iniciar, você pode abrir o navegador ou Postman em http://localhost:8080/api/health para ver o status da API e da conexão com o banco.
 
 ## Deploy do backend na Vercel
