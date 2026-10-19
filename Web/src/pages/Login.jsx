@@ -27,7 +27,9 @@ export default function Login() {
 
   // Modos de exibição da tela:
   // 'LOGIN' | 'CADASTRO_CLIENTE' | 'VENDEDOR_ETAPA_1' | 'VENDEDOR_ETAPA_2' | 'CRIAR_LOJA_CLIENTE_LOGADO'
-  const [modo, setModo] = useState('LOGIN');
+  const [modo, setModo] = useState(() =>
+    usuario?.tipoUsuario === 1 ? 'CRIAR_LOJA_CLIENTE_LOGADO' : 'LOGIN'
+  );
 
   // Estado de Formulário de Login
   const [loginEmail, setLoginEmail] = useState('');

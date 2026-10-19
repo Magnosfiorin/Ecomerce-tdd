@@ -1,18 +1,28 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { databaseService } from '../services/databaseService';
 import { useCart } from '../context/CartContext';
-import { ShoppingCart, Check, RefreshCw, Star, Layers, Sparkles } from 'lucide-react';
+import {
+  ShoppingCart,
+  Check,
+  RefreshCw,
+  Layers,
+  Search,
+  ArrowDownWideNarrow,
+  LayoutGrid,
+  List
+} from 'lucide-react';
 
 export default function Catalogo() {
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
-  const [versaoAB, setVersaoAB] = useState('B'); // 'A' ou 'B' para o teste de usabilidade (Dev 3)
   const [adicionadoId, setAdicionadoId] = useState(null);
   const [busca, setBusca] = useState('');
+  const [ordenacao, setOrdenacao] = useState('nome-asc');
+  const [visualizacao, setVisualizacao] = useState('grade');
   const { adicionarItem } = useCart();
 
-   const carregarProdutos = async (termo = busca) => {
+  const carregarProdutos = async (termo = busca) => {
     setLoading(true);
     setErro('');
     try {
@@ -32,6 +42,24 @@ export default function Catalogo() {
     return () => clearTimeout(espera);
   }, [busca]);
 
+  const produtosOrdenados = useMemo(() => {
+    const nomeEmOrdemCrescente = (a, b) =>
+      String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR', { sensitivity: 'base' });
+
+    return [...produtos].sort((a, b) => {
+      switch (ordenacao) {
+        case 'preco-asc':
+          return Number(a.preco || 0) - Number(b.preco || 0) || nomeEmOrdemCrescente(a, b);
+        case 'preco-desc':
+          return Number(b.preco || 0) - Number(a.preco || 0) || nomeEmOrdemCrescente(a, b);
+        case 'estoque-desc':
+          return Number(b.estoque || 0) - Number(a.estoque || 0) || nomeEmOrdemCrescente(a, b);
+        default:
+          return nomeEmOrdemCrescente(a, b);
+      }
+    });
+  }, [produtos, ordenacao]);
+
   const handleComprar = (produto) => {
     adicionarItem(produto, 1);
     setAdicionadoId(produto.id);
@@ -40,31 +68,6 @@ export default function Catalogo() {
 
   return (
     <div className="page-container">
-      {/* Banner de Teste de Usabilidade A/B do Dev 3 */}
-      <div className="ab-testing-banner">
-        <div className="ab-info">
-          <Sparkles size={20} className="ab-icon" />
-          <div>
-            <strong>Teste de Usabilidade Cruzado (Dev 3 - A/B Testing)</strong>
-            <p>Alterne entre os layouts para validação com o grupo parceiro (Métrica SEQ / SUS).</p>
-          </div>
-        </div>
-        <div className="ab-buttons">
-          <button
-            onClick={() => setVersaoAB('A')}
-            className={`btn-ab ${versaoAB === 'A' ? 'active' : ''}`}
-          >
-            Versão A (Lista Clássica)
-          </button>
-          <button
-            onClick={() => setVersaoAB('B')}
-            className={`btn-ab ${versaoAB === 'B' ? 'active' : ''}`}
-          >
-            Versão B (Cards Modernos)
-          </button>
-        </div>
-      </div>
-
       <div className="catalogo-header">
         <div>
           <h2>Catálogo de Produtos</h2>
@@ -75,15 +78,59 @@ export default function Catalogo() {
         </button>
       </div>
 
-    <input
-        type="search"
-        className="catalogo-busca"
-        placeholder="Buscar produto por nome..."
-        value={busca}
-        onChange={(e) => setBusca(e.target.value)}
-        aria-label="Buscar produto por nome"
-        data-cy="busca-produto"
-      />
+      <div className="catalogo-toolbar">
+        <div className="catalogo-busca-wrapper">
+          <Search size={18} aria-hidden="true" />
+          <input
+            type="search"
+            className="catalogo-busca"
+            placeholder="Buscar produto por nome..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            aria-label="Buscar produto por nome"
+            data-cy="busca-produto"
+          />
+        </div>
+
+        <div className="catalogo-controles">
+          <label className="catalogo-ordenacao">
+            <ArrowDownWideNarrow size={18} aria-hidden="true" />
+            <span className="visually-hidden">Ordenar produtos</span>
+            <select
+              value={ordenacao}
+              onChange={(e) => setOrdenacao(e.target.value)}
+              aria-label="Ordenar produtos"
+            >
+              <option value="nome-asc">Nome (A-Z)</option>
+              <option value="preco-asc">Menor preço</option>
+              <option value="preco-desc">Maior preço</option>
+              <option value="estoque-desc">Maior estoque</option>
+            </select>
+          </label>
+          <div className="catalogo-visualizacao" role="group" aria-label="Visualização dos produtos">
+            <button
+              type="button"
+              className={`catalogo-visualizacao-btn ${visualizacao === 'grade' ? 'active' : ''}`}
+              onClick={() => setVisualizacao('grade')}
+              aria-label="Visualizar produtos em grade"
+              aria-pressed={visualizacao === 'grade'}
+              title="Visualizar em grade"
+            >
+              <LayoutGrid size={18} />
+            </button>
+            <button
+              type="button"
+              className={`catalogo-visualizacao-btn ${visualizacao === 'lista' ? 'active' : ''}`}
+              onClick={() => setVisualizacao('lista')}
+              aria-label="Visualizar produtos em lista"
+              aria-pressed={visualizacao === 'lista'}
+              title="Visualizar em lista"
+            >
+              <List size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
 
       {erro && <div className="alert alert-error" role="alert">{erro}</div>}
 
@@ -92,12 +139,8 @@ export default function Catalogo() {
       ) : erro ? null : produtos.length === 0 ? (
         <div className="empty-state">Nenhum produto cadastrado no momento.</div>
       ) : (
-        /* Renderização Condicional: Versão A (Lista) vs Versão B (Cards) */
-        versaoAB === 'A' ? (
-          /* ============================================================ */
-          /* VERSÃO A: Lista Clássica e Minimalista                      */
-          /* ============================================================ */
-          <div className="catalogo-lista-versao-a">
+        visualizacao === 'lista' ? (
+          <div className="catalogo-produtos-lista">
             <table className="tabela-produtos">
               <thead>
                 <tr>
@@ -108,7 +151,7 @@ export default function Catalogo() {
                 </tr>
               </thead>
               <tbody>
-                {produtos.map((p) => (
+                {produtosOrdenados.map((p) => (
                   <tr key={p.id}>
                     <td><strong>{p.nome}</strong></td>
                     <td>{p.estoque} unidades</td>
@@ -128,11 +171,8 @@ export default function Catalogo() {
             </table>
           </div>
         ) : (
-          /* ============================================================ */
-          /* VERSÃO B: Cards com Foto/Ícone, Preço Destacado e Badges     */
-          /* ============================================================ */
-          <div className="catalogo-grid-versao-b">
-            {produtos.map((p) => (
+          <div className="catalogo-produtos-grid">
+            {produtosOrdenados.map((p) => (
               <div key={p.id} className="produto-card">
                 <div className="produto-card-badge">
                   <Layers size={14} /> {p.estoque > 0 ? `${p.estoque} em estoque` : 'Esgotado'}
