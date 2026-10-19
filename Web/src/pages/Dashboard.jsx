@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 export default function Dashboard() {
-  const { usuario, loja, tipoDescricao } = useAuth();
+  const { usuario, loja } = useAuth();
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
@@ -55,7 +55,6 @@ export default function Dashboard() {
                 <span className="badge-loja-status">
                   <CheckCircle2 size={13} /> Loja Ativa
                 </span>
-                <span className="badge-perfil">{tipoDescricao}</span>
               </div>
               <p className="loja-responsavel">
                 Responsável: <strong>{usuario?.nome || 'Vendedor'} {usuario?.sobrenome || ''}</strong>
