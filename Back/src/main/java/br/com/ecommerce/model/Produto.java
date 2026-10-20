@@ -14,6 +14,7 @@ public class Produto {
     private final BigDecimal preco;
     private final int estoque;
     private final boolean ativo;
+    private final boolean disponivel;
 
     /** Construtor do cadastro (Dev 2): produto nasce ativo. */
     public Produto(String nome, BigDecimal preco, int estoque) {
@@ -26,6 +27,7 @@ public class Produto {
         this.preco = preco;
         this.estoque = estoque;
         this.ativo = ativo;
+        this.disponivel = estoque > 0;
     }
 
     /** Compatibilidade com o codigo do catalogo (preco em double). */
@@ -34,9 +36,9 @@ public class Produto {
         this.id = id;
     }
 
-    /** Disponivel = tem pelo menos 1 unidade em estoque. */
+    /** Disponivel = tem pelo menos 1 unidade em estoque. Tambem e enviado no JSON para a interface. */
     public boolean isDisponivel() {
-        return estoque > 0;
+        return disponivel;
     }
 
     public Integer getId() {
