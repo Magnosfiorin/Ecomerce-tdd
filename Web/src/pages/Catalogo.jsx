@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext';
 import {
   ShoppingCart,
   Check,
+  PackageX,
   RefreshCw,
   Layers,
   Search,
@@ -86,7 +87,12 @@ export default function Catalogo() {
     );
   }, [produtos]);
 
+  // Usa o campo "disponivel" enviado pela API; se ausente (ex.: dados mock), deduz pelo estoque.
+  const estaIndisponivel = (produto) =>
+    produto.disponivel === undefined ? !(produto.estoque > 0) : !produto.disponivel;
+
   const handleComprar = (produto) => {
+    if (estaIndisponivel(produto)) return;
     adicionarItem(produto, 1);
     setAdicionadoId(produto.id);
     setTimeout(() => setAdicionadoId(null), 1500);
@@ -196,9 +202,9 @@ export default function Catalogo() {
                       <button
                         onClick={() => handleComprar(p)}
                         className="btn btn-primary btn-sm"
-                        disabled={p.estoque <= 0}
+                        disabled={estaIndisponivel(p)}
                       >
-                        {adicionadoId === p.id ? 'Adicionado!' : 'Comprar'}
+                        {estaIndisponivel(p) ? 'Esgotado' : adicionadoId === p.id ? 'Adicionado!' : 'Comprar'}
                       </button>
                     </td>
                   </tr>
@@ -209,7 +215,10 @@ export default function Catalogo() {
         ) : (
           <div className="catalogo-produtos-grid">
             {produtosOrdenados.map((p) => (
-              <div key={p.id} className="produto-card">
+              <div
+                key={p.id}
+                className={`produto-card ${estaIndisponivel(p) ? 'produto-card--esgotado' : ''}`.trim()}
+              >
                 {imagensPorProduto[p.id] && (
                   <img
                     className="produto-imagem"
@@ -232,9 +241,13 @@ export default function Catalogo() {
                   <button
                     onClick={() => handleComprar(p)}
                     className={`btn btn-block ${adicionadoId === p.id ? 'btn-success' : 'btn-primary'}`}
-                    disabled={p.estoque <= 0}
+                    disabled={estaIndisponivel(p)}
                   >
-                    {adicionadoId === p.id ? (
+                    {estaIndisponivel(p) ? (
+                      <>
+                        <PackageX size={18} /> Esgotado
+                      </>
+                    ) : adicionadoId === p.id ? (
                       <>
                         <Check size={18} /> Adicionado ao Carrinho
                       </>
