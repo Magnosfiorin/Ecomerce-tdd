@@ -129,18 +129,8 @@ class DatabaseService {
   // Checkout
   // =========================================================================
 
-  async processarCheckout(pedido) {
-    try {
-      return await api.finalizarCheckout(pedido);
-    } catch {
-      return {
-        sucesso: true,
-        idPedido: Math.floor(Math.random() * 10000),
-        status: 'CONCLUIDO',
-        total: pedido.total,
-        mensagem: 'Pedido processado com sucesso (Mock)',
-      };
-    }
+  async processarCheckout(pedido, token) {
+    return api.finalizarCheckout(pedido, token);
   }
 }
 

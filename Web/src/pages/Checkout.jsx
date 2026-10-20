@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { databaseService } from '../services/databaseService';
-import { CheckCircle, CreditCard, ShieldCheck, ArrowLeft, ShoppingBag } from 'lucide-react';
+import { CheckCircle, ShieldCheck, ShoppingBag } from 'lucide-react';
 
 export default function Checkout() {
   const { itens, total, limparCarrinho } = useCart();
-  const { usuario } = useAuth();
+  const { usuario, token } = useAuth();
   const navigate = useNavigate();
 
-  const [nome, setNome] = useState(usuario?.email ? usuario.email.split('@')[0] : '');
+  const [nome, setNome] = useState(
+    [usuario?.nome, usuario?.sobrenome].filter(Boolean).join(' ')
+  );
   const [endereco, setEndereco] = useState('');
   const [metodoPagamento, setMetodoPagamento] = useState('PIX');
   const [loading, setLoading] = useState(false);
@@ -34,17 +36,18 @@ export default function Checkout() {
     try {
       setLoading(true);
       const resultado = await databaseService.processarCheckout({
-        usuario: usuario?.email || 'cliente@exemplo.com',
         itens: itens.map((item) => ({
           produtoId: item.produto.id,
           quantidade: item.quantidade,
-          precoUnitario: item.produto.preco,
         })),
-        total,
+        nome: nome.trim(),
         metodoPagamento,
         endereco,
-      });
+      }, token);
 
+      if (!resultado?.sucesso || resultado.status !== 'CONCLUÍDO') {
+        throw new Error('A API retornou uma confirmação de pedido inválida.');
+      }
       setPedidoConcluido(resultado);
       limparCarrinho();
     } catch (err) {
@@ -61,10 +64,10 @@ export default function Checkout() {
           <CheckCircle size={64} className="sucesso-icon" />
           <h2 data-cy="sucesso-titulo">Compra Finalizada com Sucesso!</h2>
           <p className="pedido-numero">
-            Código do Pedido: <strong>#{pedidoConcluido.idPedido || 1042}</strong>
+            Código do Pedido: <strong>#{pedidoConcluido.idPedido}</strong>
           </p>
           <p className="pedido-status">
-            Status no PostgreSQL: <span className="badge-sucesso">CONCLUÍDO</span>
+            Status no PostgreSQL: <span className="badge-sucesso">{pedidoConcluido.status}</span>
           </p>
           <p className="pedido-info">
             O estoque dos produtos foi atualizado no banco de dados. Obrigado pela preferência!
@@ -74,6 +77,20 @@ export default function Checkout() {
               Voltar ao Início
             </Link>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!usuario?.id || !token) {
+    return (
+      <div className="page-container">
+        <div className="card empty-cart-card">
+          <h2>Entre na sua conta para finalizar a compra</h2>
+          <p>O checkout exige um cliente autenticado para registrar o pedido.</p>
+          <Link to="/login" className="btn btn-primary">
+            Entrar ou criar conta
+          </Link>
         </div>
       </div>
     );

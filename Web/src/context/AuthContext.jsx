@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
+  const [token, setToken] = useState(() => localStorage.getItem('ecommerce_token'));
   const [usuario, setUsuario] = useState(() => {
     const salvo = localStorage.getItem('ecommerce_usuario');
     return salvo ? JSON.parse(salvo) : null;
@@ -29,8 +30,14 @@ export function AuthProvider({ children }) {
     }
   }, [loja]);
 
-  const login = (dadosUsuario, dadosLoja = null) => {
+  const login = (dadosUsuario, dadosLoja = null, tokenSessao = null) => {
     setUsuario(dadosUsuario);
+    setToken(tokenSessao);
+    if (tokenSessao) {
+      localStorage.setItem('ecommerce_token', tokenSessao);
+    } else {
+      localStorage.removeItem('ecommerce_token');
+    }
     if (dadosLoja) {
       setLoja(dadosLoja);
     }
@@ -40,6 +47,8 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUsuario(null);
     setLoja(null);
+    setToken(null);
+    localStorage.removeItem('ecommerce_token');
   };
 
   const promoverParaVendedor = (novaLoja) => {
@@ -71,6 +80,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         usuario,
+        token,
         loja,
         login,
         logout,

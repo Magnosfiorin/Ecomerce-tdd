@@ -8,15 +8,22 @@ import br.com.ecommerce.service.UsuarioService;
 import br.com.ecommerce.service.CatalogoService;
 
 import br.com.ecommerce.controller.ProdutoController;
+import br.com.ecommerce.controller.CheckoutController;
+import br.com.ecommerce.repository.CheckoutRepositoryJdbc;
 import br.com.ecommerce.repository.ProdutoRepositoryJdbc;
+import br.com.ecommerce.service.CheckoutService;
 import br.com.ecommerce.service.ProdutoService;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.time.Instant;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Centralizador de Rotas HTTP da aplicação E-Commerce.
@@ -32,7 +39,9 @@ public class Router implements HttpHandler {
     }
 
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private final Map<String, RouteHandler> routes = new HashMap<>();
+    private final Map<String, Session> sessions = new ConcurrentHashMap<>();
     private final DatabaseConfig databaseConfig;
 
     private final UsuarioService usuarioService;
@@ -94,6 +103,7 @@ public class Router implements HttpHandler {
                     Map<String, Object> resp = new HashMap<>();
                     resp.put("sucesso", true);
                     resp.put("usuario", usuarioSemSenha(usuario));
+                    resp.put("token", criarSessao(usuario.getId()));
                     br.com.ecommerce.model.Loja loja = usuarioService.buscarLojaPorUsuario(usuario.getId());
                     if (loja != null) {
                         resp.put("loja", loja);
@@ -121,6 +131,7 @@ public class Router implements HttpHandler {
                 resp.put("sucesso", true);
                 resp.put("mensagem", "Cliente cadastrado com sucesso!");
                 resp.put("usuario", usuarioSemSenha(salvo));
+                resp.put("token", criarSessao(salvo.getId()));
                 sendJsonResponse(exchange, 201, resp);
             } catch (IllegalArgumentException e) {
                 sendError(exchange, 400, e.getMessage());
@@ -210,12 +221,16 @@ public class Router implements HttpHandler {
             sendJsonResponse(exchange, 200, response);
         });
 
-        // Dev 5: Módulo Checkout
+        // Dev 5: Checkout transacional com validação e baixa de estoque.
+        CheckoutController checkoutController = new CheckoutController(
+                new CheckoutService(new CheckoutRepositoryJdbc(databaseConfig)));
         register("POST", "/api/checkout", exchange -> {
-            Map<String, Object> response = new HashMap<>();
-            response.put("mensagem", "Endpoint de Checkout pronto para implementação do Dev 5");
-            response.put("modulo", "Checkout");
-            sendJsonResponse(exchange, 200, response);
+            Integer usuarioId = usuarioDaSessao(exchange);
+            if (usuarioId == null) {
+                sendError(exchange, 401, "Sessão inválida ou expirada. Entre novamente.");
+                return;
+            }
+            checkoutController.finalizar(exchange, usuarioId);
         });
     }
 
@@ -270,6 +285,32 @@ public class Router implements HttpHandler {
 
     private String buildKey(String method, String path) {
         return method.toUpperCase() + ":" + path;
+    }
+
+    private String criarSessao(Integer usuarioId) {
+        byte[] tokenBytes = new byte[32];
+        SECURE_RANDOM.nextBytes(tokenBytes);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
+        sessions.put(token, new Session(usuarioId, Instant.now().plusSeconds(8 * 60 * 60L)));
+        return token;
+    }
+
+    private Integer usuarioDaSessao(HttpExchange exchange) {
+        String authorization = exchange.getRequestHeaders().getFirst("Authorization");
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return null;
+        }
+
+        String token = authorization.substring("Bearer ".length()).trim();
+        Session session = sessions.get(token);
+        if (session == null) {
+            return null;
+        }
+        if (Instant.now().isAfter(session.expiresAt())) {
+            sessions.remove(token, session);
+            return null;
+        }
+        return session.usuarioId();
     }
 
     private String normalizePath(String path) {
@@ -355,4 +396,6 @@ public class Router implements HttpHandler {
     public Map<String, RouteHandler> getRoutes() {
         return routes;
     }
+
+    private record Session(int usuarioId, Instant expiresAt) {}
 }
