@@ -555,6 +555,30 @@ input:focus, select:focus {
   transition: transform 0.15s ease;
 }
 
+.produto-imagem {
+  width: 100%;
+  height: 190px;
+  margin-bottom: 1rem;
+  border-radius: calc(var(--radius) - 4px);
+  object-fit: cover;
+  background-color: #f1f5f9;
+}
+
+.catalogo-produto-lista {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.produto-imagem-lista {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  background-color: #f1f5f9;
+}
+
 .produto-card:hover {
   transform: translateY(-2px);
 }

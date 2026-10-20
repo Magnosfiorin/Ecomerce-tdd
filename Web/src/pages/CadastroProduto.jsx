@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { databaseService } from '../services/databaseService';
 import { PackagePlus, DollarSign, Layers, Tag } from 'lucide-react';
 
 export default function CadastroProduto() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [nome, setNome] = useState('');
   const [preco, setPreco] = useState('');
   const [estoque, setEstoque] = useState('');
@@ -46,6 +48,7 @@ export default function CadastroProduto() {
       setNome('');
       setPreco('');
       setEstoque('');
+      setTimeout(() => navigate('/dashboard'), 700);
     } catch (err) {
       setMensagem({ tipo: 'error', texto: err.message || 'Erro ao cadastrar produto.' });
     } finally {

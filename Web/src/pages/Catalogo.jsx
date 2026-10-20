@@ -12,6 +12,14 @@ import {
   List
 } from 'lucide-react';
 
+const imagensDisponiveis = Object.values(
+  import.meta.glob('../../img/*.{png,jpg,jpeg,webp,avif}', {
+    eager: true,
+    import: 'default',
+    query: '?url',
+  })
+);
+
 export default function Catalogo() {
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +67,24 @@ export default function Catalogo() {
       }
     });
   }, [produtos, ordenacao]);
+
+  const imagensPorProduto = useMemo(() => {
+    if (imagensDisponiveis.length === 0) return {};
+
+    const imagensEmbaralhadas = [...imagensDisponiveis];
+    for (let i = imagensEmbaralhadas.length - 1; i > 0; i -= 1) {
+      const indiceAleatorio = Math.floor(Math.random() * (i + 1));
+      [imagensEmbaralhadas[i], imagensEmbaralhadas[indiceAleatorio]] =
+        [imagensEmbaralhadas[indiceAleatorio], imagensEmbaralhadas[i]];
+    }
+
+    return Object.fromEntries(
+      produtos.map((produto, indice) => [
+        produto.id,
+        imagensEmbaralhadas[indice % imagensEmbaralhadas.length],
+      ])
+    );
+  }, [produtos]);
 
   const handleComprar = (produto) => {
     adicionarItem(produto, 1);
@@ -153,7 +179,17 @@ export default function Catalogo() {
               <tbody>
                 {produtosOrdenados.map((p) => (
                   <tr key={p.id}>
-                    <td><strong>{p.nome}</strong></td>
+                    <td className="catalogo-produto-lista">
+                      {imagensPorProduto[p.id] && (
+                        <img
+                          className="produto-imagem-lista"
+                          src={imagensPorProduto[p.id]}
+                          alt={p.nome}
+                          loading="lazy"
+                        />
+                      )}
+                      <strong>{p.nome}</strong>
+                    </td>
                     <td>{p.estoque} unidades</td>
                     <td>R$ {Number(p.preco).toFixed(2)}</td>
                     <td>
@@ -174,6 +210,14 @@ export default function Catalogo() {
           <div className="catalogo-produtos-grid">
             {produtosOrdenados.map((p) => (
               <div key={p.id} className="produto-card">
+                {imagensPorProduto[p.id] && (
+                  <img
+                    className="produto-imagem"
+                    src={imagensPorProduto[p.id]}
+                    alt={p.nome}
+                    loading="lazy"
+                  />
+                )}
                 <div className="produto-card-badge">
                   <Layers size={14} /> {p.estoque > 0 ? `${p.estoque} em estoque` : 'Esgotado'}
                 </div>
