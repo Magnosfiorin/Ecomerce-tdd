@@ -22,12 +22,23 @@ public class ProdutoService {
     }
 
     public Produto cadastrar(String nome, BigDecimal preco, BigDecimal estoque) {
+        return cadastrar(nome, preco, estoque, null);
+    }
+
+    public Produto cadastrar(String nome, BigDecimal preco, BigDecimal estoque, Integer usuarioId) {
         validarNome(nome);
         validarPreco(preco);
         validarEstoque(estoque);
 
         Produto produto = new Produto(nome.trim(), preco, estoque.intValueExact());
-        return repository.salvar(produto);
+        return repository.salvar(produto, usuarioId);
+    }
+
+    public boolean excluir(int produtoId, int usuarioId) {
+        if (produtoId <= 0 || usuarioId <= 0) {
+            throw new ProdutoInvalidoException("Identificação inválida.");
+        }
+        return repository.desativar(produtoId, usuarioId);
     }
 
     private void validarNome(String nome) {

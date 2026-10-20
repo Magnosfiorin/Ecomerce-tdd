@@ -8,37 +8,60 @@ import {
   PlusCircle,
   DollarSign,
   Layers,
+  ShoppingBag,
   MapPin,
   Mail,
   Building2,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
+  Trash2
 } from 'lucide-react';
 
 export default function Dashboard() {
-  const { usuario, loja } = useAuth();
+  const { usuario, loja, token } = useAuth();
   const [produtos, setProdutos] = useState([]);
+  const [quantidadePedidos, setQuantidadePedidos] = useState(0);
+  const [valorVendas, setValorVendas] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [produtoExcluindo, setProdutoExcluindo] = useState(null);
   const [erro, setErro] = useState('');
 
   useEffect(() => {
-    async function carregarProdutos() {
+    async function carregarDashboard() {
       try {
         setLoading(true);
-        const data = await databaseService.getProdutos();
-        setProdutos(data || []);
+        setErro('');
+        const data = await databaseService.carregarDashboardLoja(token);
+        setProdutos(data.produtos || []);
+        setQuantidadePedidos(data.quantidadePedidos || 0);
+        setValorVendas(Number(data.valorVendas) || 0);
       } catch (err) {
-        console.error('Erro ao carregar produtos:', err);
-        setErro(`Não foi possível carregar os produtos da API: ${err.message}`);
+        setErro(`Não foi possível carregar os dados da loja: ${err.message}`);
       } finally {
         setLoading(false);
       }
     }
-    carregarProdutos();
-  }, []);
+    carregarDashboard();
+  }, [token]);
 
-  const totalEstoque = produtos.reduce((acc, p) => acc + (p.estoque || 0), 0);
-  const valorTotalCatalogo = produtos.reduce((acc, p) => acc + ((p.preco || 0) * (p.estoque || 0)), 0);
+  const excluirProduto = async (produto) => {
+    if (!window.confirm(`Deseja excluir "${produto.nome}" do catálogo?`)) return;
+
+    try {
+      setProdutoExcluindo(produto.id);
+      setErro('');
+      await databaseService.excluirProduto(produto.id, token);
+      setProdutos((atuais) => atuais.filter((item) => item.id !== produto.id));
+    } catch (err) {
+      setErro(`Não foi possível excluir o produto: ${err.message}`);
+    } finally {
+      setProdutoExcluindo(null);
+    }
+  };
+
+  const totalEstoque = produtos.reduce((acc, p) => acc + (Number(p.estoque) || 0), 0);
+  const formatarMoeda = (valor) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
 
   return (
     <div className="page-container dashboard-container">
@@ -114,10 +137,18 @@ export default function Dashboard() {
             <DollarSign size={22} />
           </div>
           <div className="metrica-dados">
-            <span className="metrica-label">Valor Total Estimado</span>
-            <span className="metrica-valor">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTotalCatalogo)}
-            </span>
+            <span className="metrica-label">Valor Total das Vendas</span>
+            <span className="metrica-valor">{formatarMoeda(valorVendas)}</span>
+          </div>
+        </div>
+
+        <div className="metrica-card">
+          <div className="metrica-icon bg-blue">
+            <ShoppingBag size={22} />
+          </div>
+          <div className="metrica-dados">
+            <span className="metrica-label">Pedidos Vendidos</span>
+            <span className="metrica-valor">{quantidadePedidos}</span>
           </div>
         </div>
       </div>
@@ -158,8 +189,9 @@ export default function Dashboard() {
                   <th>Produto</th>
                   <th>Preço Unitário</th>
                   <th>Estoque</th>
+                  <th>Unidades vendidas</th>
                   <th>Status</th>
-                  <th>Módulo</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -170,13 +202,14 @@ export default function Dashboard() {
                       <strong>{p.nome}</strong>
                     </td>
                     <td>
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.preco)}
+                      {formatarMoeda(Number(p.preco) || 0)}
                     </td>
                     <td>
                       <span className={`estoque-tag ${p.estoque > 0 ? 'em-estoque' : 'esgotado'}`}>
                         {p.estoque} un.
                       </span>
                     </td>
+                    <td>{Number(p.quantidadeVendida) || 0}</td>
                     <td>
                       {p.estoque > 0 ? (
                         <span className="badge-status-ativo">Ativo</span>
@@ -185,9 +218,16 @@ export default function Dashboard() {
                       )}
                     </td>
                     <td>
-                      <span className="badge-dev-modulo" title="Operações e validações de produtos sob responsabilidade do Dev 2">
-                        Dev 2 (Cadastro)
-                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-sm"
+                        onClick={() => excluirProduto(p)}
+                        disabled={produtoExcluindo === p.id}
+                        aria-label={`Excluir ${p.nome}`}
+                      >
+                        <Trash2 size={15} />
+                        {produtoExcluindo === p.id ? 'Excluindo...' : 'Excluir'}
+                      </button>
                     </td>
                   </tr>
                 ))}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { databaseService } from '../services/databaseService';
 import { buscarEnderecoPorCep } from '../services/cepService';
@@ -20,6 +20,20 @@ import {
 } from 'lucide-react';
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+function formatarCpf(valor) {
+  const numeros = valor.replace(/\D/g, '').slice(0, 11);
+  if (numeros.length > 9) {
+    return `${numeros.slice(0, 3)}.${numeros.slice(3, 6)}.${numeros.slice(6, 9)}-${numeros.slice(9)}`;
+  }
+  if (numeros.length > 6) {
+    return `${numeros.slice(0, 3)}.${numeros.slice(3, 6)}.${numeros.slice(6)}`;
+  }
+  if (numeros.length > 3) {
+    return `${numeros.slice(0, 3)}.${numeros.slice(3)}`;
+  }
+  return numeros;
+}
 
 export default function Login() {
   const { usuario, login, promoverParaVendedor } = useAuth();
@@ -220,6 +234,11 @@ export default function Login() {
       return;
     }
 
+    if (cpf.replace(/\D/g, '').length !== 11) {
+      setErro('O CPF deve conter 11 números.');
+      return;
+    }
+
     if (!isEmailValido(email)) {
       setErro('E-mail inválido. Utilize o formato nome@dominio.com');
       return;
@@ -271,6 +290,11 @@ export default function Login() {
 
     if (!nome.trim() || !sobrenome.trim() || !cpf.trim() || !endereco.trim() || !cidade.trim() || !estado.trim()) {
       setErro('Preencha todos os dados pessoais e endereço para continuar.');
+      return;
+    }
+
+    if (cpf.replace(/\D/g, '').length !== 11) {
+      setErro('O CPF deve conter 11 números.');
       return;
     }
 
@@ -483,6 +507,12 @@ export default function Login() {
             </div>
 
             <div className="auth-footer-links">
+              <Link to="/recuperar-senha" className="btn-link-inline">
+                Esqueceu sua senha?
+              </Link>
+            </div>
+
+            <div className="auth-footer-links">
               <span>Ainda não tem conta de cliente? </span>
               <button
                 type="button"
@@ -551,8 +581,10 @@ export default function Login() {
                     id="cliCpf"
                     type="text"
                     placeholder="000.000.000-00"
+                    inputMode="numeric"
+                    maxLength={14}
                     value={cpf}
-                    onChange={(e) => setCpf(e.target.value)}
+                    onChange={(e) => setCpf(formatarCpf(e.target.value))}
                     required
                   />
                 </div>
@@ -786,8 +818,10 @@ export default function Login() {
                     id="vendCpf"
                     type="text"
                     placeholder="000.000.000-00"
+                    inputMode="numeric"
+                    maxLength={14}
                     value={cpf}
-                    onChange={(e) => setCpf(e.target.value)}
+                    onChange={(e) => setCpf(formatarCpf(e.target.value))}
                     required
                   />
                 </div>

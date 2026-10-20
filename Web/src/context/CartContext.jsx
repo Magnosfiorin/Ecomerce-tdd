@@ -1,37 +1,60 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
 
+function storageKey(usuarioId) {
+  return usuarioId ? `ecommerce_carrinho_${usuarioId}` : 'ecommerce_carrinho_guest';
+}
+
+function carregarItens(key) {
+  const salvo = localStorage.getItem(key);
+  return salvo ? JSON.parse(salvo) : [];
+}
+
 export function CartProvider({ children }) {
-  const [itens, setItens] = useState(() => {
-    const salvo = localStorage.getItem('ecommerce_carrinho');
-    return salvo ? JSON.parse(salvo) : [];
-  });
+  const { usuario } = useAuth();
+  const key = storageKey(usuario?.id);
+  const [carrinho, setCarrinho] = useState(() => ({
+    key,
+    itens: carregarItens(key),
+  }));
+  const itens = carrinho.key === key ? carrinho.itens : carregarItens(key);
 
   useEffect(() => {
-    localStorage.setItem('ecommerce_carrinho', JSON.stringify(itens));
-  }, [itens]);
+    if (carrinho.key === key) {
+      localStorage.setItem(key, JSON.stringify(carrinho.itens));
+    } else {
+      setCarrinho({ key, itens });
+    }
+  }, [carrinho, itens, key]);
 
   const adicionarItem = (produto, quantidade = 1) => {
-    setItens((prev) => {
+    setCarrinho((atual) => {
+      const prev = atual.key === key ? atual.itens : carregarItens(key);
       const existente = prev.find((item) => item.produto.id === produto.id);
       if (existente) {
-        return prev.map((item) =>
-          item.produto.id === produto.id
+        return {
+          key,
+          itens: prev.map((item) => item.produto.id === produto.id
             ? { ...item, quantidade: item.quantidade + quantidade }
-            : item
-        );
+            : item),
+        };
       }
-      return [...prev, { produto, quantidade }];
+      return { key, itens: [...prev, { produto, quantidade }] };
     });
   };
 
   const removerItem = (produtoId) => {
-    setItens((prev) => prev.filter((item) => item.produto.id !== produtoId));
+    setCarrinho((atual) => ({
+      key,
+      itens: (atual.key === key ? atual.itens : carregarItens(key))
+        .filter((item) => item.produto.id !== produtoId),
+    }));
   };
 
   const limparCarrinho = () => {
-    setItens([]);
+    setCarrinho({ key, itens: [] });
   };
 
   const total = itens.reduce((acc, item) => acc + item.produto.preco * item.quantidade, 0);

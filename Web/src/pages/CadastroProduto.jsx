@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { databaseService } from '../services/databaseService';
 import { PackagePlus, DollarSign, Layers, Tag } from 'lucide-react';
 
 export default function CadastroProduto() {
+  const { token } = useAuth();
   const [nome, setNome] = useState('');
   const [preco, setPreco] = useState('');
   const [estoque, setEstoque] = useState('');
@@ -38,7 +40,7 @@ export default function CadastroProduto() {
         nome: nome.trim(),
         preco: valorPreco,
         estoque: qtdEstoque,
-      });
+      }, token);
 
       setMensagem({ tipo: 'success', texto: `Produto "${nome}" cadastrado com sucesso no banco de dados!` });
       setNome('');
