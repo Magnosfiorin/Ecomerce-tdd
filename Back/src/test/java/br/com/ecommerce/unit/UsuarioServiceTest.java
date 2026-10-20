@@ -1,5 +1,6 @@
 package br.com.ecommerce.unit;
 
+import br.com.ecommerce.config.DatabaseConfig;
 import br.com.ecommerce.model.Loja;
 import br.com.ecommerce.model.Usuario;
 import br.com.ecommerce.service.SenhaUtils;
@@ -7,6 +8,9 @@ import br.com.ecommerce.service.UsuarioService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.sql.Connection;
+import java.sql.SQLException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -160,6 +164,26 @@ public class UsuarioServiceTest {
         assertEquals(Usuario.TIPO_VENDEDOR_CLIENTE, authHibrido.getTipoUsuario(), "Perfil deve ser identificado como TIPO_VENDEDOR_CLIENTE (2)");
         assertTrue(authHibrido.isVendedor(), "Deve possuir permissões de Vendedor");
         assertTrue(authHibrido.isCliente(), "Deve possuir permissões de Cliente");
+    }
+
+    @Test
+    @DisplayName("Deve autenticar sem abrir uma conexão de teste separada")
+    void deveEvitarConexaoDeTesteAntesDaAutenticacao() {
+        DatabaseConfig databaseConfig = new DatabaseConfig("jdbc:test", "user", "password") {
+            @Override
+            public boolean testConnection() {
+                fail("A autenticação não deve abrir uma conexão de teste separada.");
+                return false;
+            }
+
+            @Override
+            public Connection getConnection() throws SQLException {
+                throw new SQLException("Banco indisponível.");
+            }
+        };
+        UsuarioService usuarioService = new UsuarioService(databaseConfig);
+
+        assertNull(usuarioService.autenticar("cliente@exemplo.com", "senha123"));
     }
 
     @Test

@@ -48,7 +48,7 @@ public class UsuarioService {
             throw new IllegalArgumentException("A senha deve conter no mínimo 4 caracteres.");
         }
 
-        if (databaseConfig != null && databaseConfig.testConnection()) {
+        if (databaseConfig != null) {
             // Busca o usuário APENAS pelo e-mail — a verificação da senha é feita em memória via BCrypt
             String sql = "SELECT id, nome, sobrenome, email, senha, cpf, cep, endereco, numero, bairro, cidade, estado, pais, tipo_usuario " +
                          "FROM usuarios WHERE LOWER(email) = LOWER(?)";
@@ -296,7 +296,7 @@ public class UsuarioService {
      * Busca a loja associada a um usuário.
      */
     public Loja buscarLojaPorUsuario(int usuarioId) {
-        if (databaseConfig != null && databaseConfig.testConnection()) {
+        if (databaseConfig != null) {
             String sql = "SELECT id, usuario_id, nome_loja, email_loja, cnpj, cep_loja, endereco_loja, numero_loja, bairro_loja, cidade_loja, estado_loja, pais_loja " +
                          "FROM lojas WHERE usuario_id = ?";
             try (Connection conn = databaseConfig.getConnection();
