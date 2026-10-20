@@ -560,7 +560,7 @@ export default function Login() {
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="cliEmail">E-mail (Regex)</label>
+                <label htmlFor="cliEmail">E-mail</label>
                 <div className="input-icon-wrapper">
                   <Mail size={18} />
                   <input
