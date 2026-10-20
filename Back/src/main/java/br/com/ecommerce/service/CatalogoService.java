@@ -40,7 +40,7 @@ public class CatalogoService {
     public List<Produto> buscarPorNome(String termo) {
         String busca = termo == null ? "" : termo.trim().toLowerCase();
 
-        if (databaseConfig != null && databaseConfig.testConnection()) {
+        if (databaseConfig != null) {
             String sql = "SELECT id, nome, preco, estoque, ativo FROM produtos " +
                          "WHERE ativo = TRUE AND LOWER(nome) LIKE ? ORDER BY nome";
             try (Connection conn = databaseConfig.getConnection();

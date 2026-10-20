@@ -1,11 +1,14 @@
 package br.com.ecommerce.unit;
 
+import br.com.ecommerce.config.DatabaseConfig;
 import br.com.ecommerce.model.Produto;
 import br.com.ecommerce.service.CatalogoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -45,5 +48,29 @@ public class CatalogoServiceTest {
         assertEquals("Camiseta Preta", resultado.get(0).getNome());
         assertTrue(catalogo.buscarPorNome("tênis").isEmpty(), "Produto inativo não pode aparecer na busca");
         assertEquals(2, catalogo.buscarPorNome("camiseta").size());
+    }
+
+    @Test
+    @DisplayName("Deve consultar o banco diretamente sem abrir uma conexão de teste separada")
+    void deveEvitarConexaoDeTesteAntesDaConsulta() {
+        DatabaseConfig databaseConfig = new DatabaseConfig("jdbc:test", "user", "password") {
+            @Override
+            public boolean testConnection() {
+                fail("A consulta não deve abrir uma conexão de teste separada.");
+                return false;
+            }
+
+            @Override
+            public Connection getConnection() throws SQLException {
+                throw new SQLException("Banco indisponível.");
+            }
+        };
+        CatalogoService catalogoComBancoIndisponivel = new CatalogoService(databaseConfig, List.of(
+                new Produto(1, "Camiseta Azul", 49.90, 10, true)));
+
+        List<Produto> resultado = catalogoComBancoIndisponivel.listarAtivos();
+
+        assertEquals(1, resultado.size());
+        assertEquals("Camiseta Azul", resultado.get(0).getNome());
     }
 }
