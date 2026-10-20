@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { databaseService } from '../services/databaseService';
@@ -116,7 +116,7 @@ export default function Checkout() {
         <div className="carrinho-itens-col">
           <div className="card">
             <h2>Finalizar Pedido</h2>
-            <p>Módulo de Checkout (Dev 5)</p>
+            <p>Informe os dados de entrega e pagamento para concluir seu pedido.</p>
 
             {erro && <div className="alert alert-error">{erro}</div>}
 

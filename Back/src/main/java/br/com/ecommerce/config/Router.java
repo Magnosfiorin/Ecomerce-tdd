@@ -13,6 +13,8 @@ import br.com.ecommerce.repository.CheckoutRepositoryJdbc;
 import br.com.ecommerce.repository.ProdutoRepositoryJdbc;
 import br.com.ecommerce.service.CheckoutService;
 import br.com.ecommerce.service.ProdutoService;
+import br.com.ecommerce.service.DashboardLojaService;
+import br.com.ecommerce.service.PasswordResetService;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -45,12 +47,14 @@ public class Router implements HttpHandler {
     private final DatabaseConfig databaseConfig;
 
     private final UsuarioService usuarioService;
+    private final PasswordResetService passwordResetService;
 
     private final CatalogoService catalogoService;
 
     public Router(DatabaseConfig databaseConfig) {
         this.databaseConfig = databaseConfig;
         this.usuarioService = new UsuarioService(databaseConfig);
+        this.passwordResetService = new PasswordResetService(databaseConfig);
         this.catalogoService = new CatalogoService(databaseConfig);
         registerDefaultRoutes();
     }
@@ -114,6 +118,57 @@ public class Router implements HttpHandler {
                 }
             } catch (IllegalArgumentException e) {
                 sendError(exchange, 400, e.getMessage());
+            }
+        });
+
+        register("POST", "/api/auth/recuperar-senha", exchange -> {
+            Map<?, ?> body = readJsonBody(exchange, Map.class);
+            if (body == null || body.get("email") == null) {
+                sendError(exchange, 400, "Informe um e-mail válido.");
+                return;
+            }
+
+            try {
+                passwordResetService.solicitarRecuperacao(String.valueOf(body.get("email")));
+                Map<String, Object> response = new HashMap<>();
+                response.put("sucesso", true);
+                response.put("mensagem",
+                        "Se o e-mail estiver cadastrado, você receberá um link para redefinir sua senha.");
+                sendJsonResponse(exchange, 200, response);
+            } catch (IllegalArgumentException e) {
+                sendError(exchange, 400, e.getMessage());
+            } catch (IllegalStateException e) {
+                System.err.println("[Router] Falha na recuperação de senha: " + e.getMessage());
+                sendError(exchange, 503, "Não foi possível enviar o link agora. Tente novamente mais tarde.");
+            }
+        });
+
+        register("POST", "/api/auth/redefinir-senha", exchange -> {
+            Map<?, ?> body = readJsonBody(exchange, Map.class);
+            if (body == null) {
+                sendError(exchange, 400, "Dados de redefinição inválidos.");
+                return;
+            }
+            String token = body.get("token") == null ? null : String.valueOf(body.get("token"));
+            String senha = body.get("senha") == null ? null : String.valueOf(body.get("senha"));
+
+            try {
+                var usuarioId = passwordResetService.redefinirSenha(token, senha);
+                if (usuarioId.isEmpty()) {
+                    sendError(exchange, 400, "O link de recuperação é inválido ou expirou.");
+                    return;
+                }
+                int idRedefinido = usuarioId.getAsInt();
+                sessions.entrySet().removeIf(entry -> entry.getValue().usuarioId() == idRedefinido);
+                Map<String, Object> response = new HashMap<>();
+                response.put("sucesso", true);
+                response.put("mensagem", "Senha redefinida com sucesso.");
+                sendJsonResponse(exchange, 200, response);
+            } catch (IllegalArgumentException e) {
+                sendError(exchange, 400, e.getMessage());
+            } catch (IllegalStateException e) {
+                System.err.println("[Router] Falha ao redefinir senha: " + e.getMessage());
+                sendError(exchange, 503, "Não foi possível redefinir a senha agora. Tente novamente mais tarde.");
             }
         });
 
@@ -201,7 +256,40 @@ public class Router implements HttpHandler {
         // Dev 2: Módulo Cadastro de Produtos (Vendedor)
         ProdutoController produtoController = new ProdutoController(
                 new ProdutoService(new ProdutoRepositoryJdbc(databaseConfig)));
-        register("POST", "/api/produtos", produtoController::cadastrar);
+        register("POST", "/api/produtos", exchange -> {
+            Integer usuarioId = usuarioDaSessao(exchange);
+            if (usuarioId != null && !usuarioPodeGerenciarLoja(usuarioId)) {
+                sendError(exchange, 403, "Apenas vendedores podem cadastrar produtos.");
+                return;
+            }
+            produtoController.cadastrar(exchange, usuarioId);
+        });
+        register("DELETE", "/api/produtos/{id}", exchange -> {
+            Integer usuarioId = usuarioDaSessao(exchange);
+            if (usuarioId == null) {
+                sendError(exchange, 401, "Sessão inválida ou expirada. Entre novamente.");
+                return;
+            }
+            if (!usuarioPodeGerenciarLoja(usuarioId)) {
+                sendError(exchange, 403, "Apenas vendedores podem excluir produtos.");
+                return;
+            }
+            String path = exchange.getRequestURI().getPath();
+            int produtoId = Integer.parseInt(path.substring("/api/produtos/".length()));
+            produtoController.excluir(exchange, produtoId, usuarioId);
+        });
+        register("GET", "/api/loja/dashboard", exchange -> {
+            Integer usuarioId = usuarioDaSessao(exchange);
+            if (usuarioId == null) {
+                sendError(exchange, 401, "Sessão inválida ou expirada. Entre novamente.");
+                return;
+            }
+            if (!usuarioPodeGerenciarLoja(usuarioId)) {
+                sendError(exchange, 403, "Apenas vendedores podem acessar o dashboard da loja.");
+                return;
+            }
+            sendJsonResponse(exchange, 200, new DashboardLojaService(databaseConfig).carregar(usuarioId));
+        });
 
         // Dev 3: Módulo Catálogo (Cliente)
         // GET /api/produtos            -> lista produtos ativos
@@ -251,6 +339,10 @@ public class Router implements HttpHandler {
         String key = buildKey(method, path);
 
         RouteHandler handler = routes.get(key);
+        if (handler == null && "DELETE".equalsIgnoreCase(method)
+                && path.matches("/api/produtos/[1-9][0-9]*")) {
+            handler = routes.get("DELETE:/api/produtos/{id}");
+        }
 
         if (handler != null) {
             try {
@@ -311,6 +403,20 @@ public class Router implements HttpHandler {
             return null;
         }
         return session.usuarioId();
+    }
+
+    private boolean usuarioPodeGerenciarLoja(int usuarioId) {
+        try (var connection = databaseConfig.getConnection();
+             var statement = connection.prepareStatement(
+                     "SELECT tipo_usuario FROM usuarios WHERE id = ?")) {
+            statement.setInt(1, usuarioId);
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next()
+                        && (resultSet.getInt("tipo_usuario") == 0 || resultSet.getInt("tipo_usuario") == 2);
+            }
+        } catch (java.sql.SQLException e) {
+            throw new IllegalStateException("Falha ao validar permissões da loja.", e);
+        }
     }
 
     private String normalizePath(String path) {

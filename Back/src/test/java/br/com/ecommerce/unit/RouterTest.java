@@ -26,6 +26,10 @@ public class RouterTest {
 
         assertTrue(rotas.containsKey("GET:/api/health"), "Rota de Health Check deve estar registrada");
         assertTrue(rotas.containsKey("POST:/api/auth/login"), "Rota de Login (Dev 1) deve estar registrada");
+        assertTrue(rotas.containsKey("POST:/api/auth/recuperar-senha"),
+                "Rota de solicitação de recuperação de senha deve estar registrada");
+        assertTrue(rotas.containsKey("POST:/api/auth/redefinir-senha"),
+                "Rota de redefinição de senha deve estar registrada");
         assertTrue(rotas.containsKey("POST:/api/produtos"), "Rota de Cadastro (Dev 2) deve estar registrada");
         assertTrue(rotas.containsKey("GET:/api/produtos"), "Rota de Catálogo (Dev 3) deve estar registrada");
         assertTrue(rotas.containsKey("POST:/api/carrinho"), "Rota de Carrinho (Dev 4) deve estar registrada");

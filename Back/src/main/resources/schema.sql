@@ -33,6 +33,15 @@ ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS estado VARCHAR(50) NOT NULL DEFAUL
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pais VARCHAR(50) NOT NULL DEFAULT 'Brasil';
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS tipo_usuario INT NOT NULL DEFAULT 1;
 
+-- Tokens de recuperação são armazenados apenas como hash e podem ser usados uma única vez.
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    token_hash CHAR(64) PRIMARY KEY,
+    usuario_id INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    expires_at TIMESTAMP NOT NULL,
+    used_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 2. Tabela de Lojas com Endereço Detalhado
 CREATE TABLE IF NOT EXISTS lojas (
     id SERIAL PRIMARY KEY,

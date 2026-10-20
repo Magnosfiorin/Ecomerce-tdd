@@ -327,6 +327,27 @@ input:focus, select:focus {
   font-size: 0.85rem;
 }
 
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid #dc2626;
+  border-radius: var(--radius);
+  background: #fff;
+  color: #b91c1c;
+  cursor: pointer;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.btn-danger:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .btn-lg {
   padding: 0.85rem 1.5rem;
   font-size: 1.05rem;
@@ -532,6 +553,30 @@ input:focus, select:focus {
   flex-direction: column;
   justify-content: space-between;
   transition: transform 0.15s ease;
+}
+
+.produto-imagem {
+  width: 100%;
+  height: 190px;
+  margin-bottom: 1rem;
+  border-radius: calc(var(--radius) - 4px);
+  object-fit: cover;
+  background-color: #f1f5f9;
+}
+
+.catalogo-produto-lista {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.produto-imagem-lista {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  background-color: #f1f5f9;
 }
 
 .produto-card:hover {
@@ -847,6 +892,24 @@ input:focus, select:focus {
 
 .btn-link-inline:hover {
   text-decoration: underline;
+}
+
+.auth-recovery-card {
+  max-width: 460px;
+}
+
+.recovery-success-icon {
+  color: var(--success) !important;
+}
+
+.spin {
+  animation: recovery-spin 1s linear infinite;
+}
+
+@keyframes recovery-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .etapas-indicador {

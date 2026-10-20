@@ -198,6 +198,14 @@ public class DatabaseConfig {
             ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pais VARCHAR(50) NOT NULL DEFAULT 'Brasil';
             ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS tipo_usuario INT NOT NULL DEFAULT 1;
 
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                token_hash CHAR(64) PRIMARY KEY,
+                usuario_id INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                expires_at TIMESTAMP NOT NULL,
+                used_at TIMESTAMP,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
             DO $$ 
             BEGIN 
                 IF EXISTS (

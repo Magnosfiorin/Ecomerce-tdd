@@ -2,6 +2,8 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Catalogo from '../pages/Catalogo';
 import Login from '../pages/Login';
+import RecuperarSenha from '../pages/RecuperarSenha';
+import RedefinirSenha from '../pages/RedefinirSenha';
 import CadastroProduto from '../pages/CadastroProduto';
 import Dashboard from '../pages/Dashboard';
 import Carrinho from '../pages/Carrinho';
@@ -19,6 +21,8 @@ export default function AppRoutes() {
 
       {/* Dev 1: Módulo de Login e Identificação de Perfil */}
       <Route path="/login" element={<Login />} />
+      <Route path="/recuperar-senha" element={<RecuperarSenha />} />
+      <Route path="/redefinir-senha" element={<RedefinirSenha />} />
 
       {/* Painel do Vendedor: Listagem de Produtos da Loja */}
       <Route path="/dashboard" element={<Dashboard />} />

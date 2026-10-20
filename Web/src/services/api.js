@@ -1,9 +1,3 @@
-/**
- * Centralizador de Acesso à API Backend e Banco de Dados PostgreSQL.
- * 
- * Gerencia as chamadas HTTP para o backend Java (porta 8080).
- */
-
 const DEFAULT_API_BASE_URL = import.meta.env.PROD
   ? 'https://ecomerce-tdd-back-steel.vercel.app/api'
   : 'http://localhost:8080/api';
@@ -13,33 +7,29 @@ const API_BASE_URL = import.meta.env.PROD && CONFIGURED_API_BASE_URL?.startsWith
   : CONFIGURED_API_BASE_URL || DEFAULT_API_BASE_URL;
 
 async function request(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
-  const defaultHeaders = {
-    'Content-Type': 'application/json',
-  };
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...defaultHeaders,
-        ...options.headers,
-      },
-    });
+  const isJson = response.headers.get('content-type')?.includes('application/json');
+  const data = isJson ? await response.json() : await response.text();
 
-    const isJson = response.headers.get('content-type')?.includes('application/json');
-    const data = isJson ? await response.json() : await response.text();
-
-    if (!response.ok) {
-      const mensagemErro = (typeof data === 'object' && data?.erro) ? data.erro : `Erro HTTP: ${response.status}`;
-      throw new Error(mensagemErro);
-    }
-
-    return data;
-  } catch (error) {
-    console.warn(`[API] Falha no endpoint ${endpoint}:`, error.message);
-    throw error;
+  if (!response.ok) {
+    const message = typeof data === 'object' && data?.erro
+      ? data.erro
+      : `Erro HTTP: ${response.status}`;
+    throw new Error(message);
   }
+
+  return data;
+}
+
+function authorization(token) {
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export const api = {
@@ -47,14 +37,24 @@ export const api = {
     return request('/health');
   },
 
-  // =========================================================================
-  // Módulo de Autenticação e Usuários (Dev 1)
-  // =========================================================================
-
   async login(email, senha) {
     return request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, senha }),
+    });
+  },
+
+  async solicitarRecuperacaoSenha(email) {
+    return request('/auth/recuperar-senha', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  async redefinirSenha(token, senha) {
+    return request('/auth/redefinir-senha', {
+      method: 'POST',
+      body: JSON.stringify({ token, senha }),
     });
   },
 
@@ -79,26 +79,30 @@ export const api = {
     });
   },
 
-  // =========================================================================
-  // Módulo de Produtos e Catálogo (Dev 2 e Dev 3)
-  // =========================================================================
-
-  async cadastrarProduto(produto) {
+  async cadastrarProduto(produto, token) {
     return request('/produtos', {
       method: 'POST',
+      headers: authorization(token),
       body: JSON.stringify(produto),
     });
   },
 
-   async listarProdutos(query = '') {
-    return request(`/produtos${query}`, {
-      method: 'GET',
+  async listarProdutos(query = '') {
+    return request(`/produtos${query}`);
+  },
+
+  async carregarDashboardLoja(token) {
+    return request('/loja/dashboard', {
+      headers: authorization(token),
     });
   },
 
-  // =========================================================================
-  // Módulo Carrinho e Checkout (Dev 4 e Dev 5)
-  // =========================================================================
+  async excluirProduto(produtoId, token) {
+    return request(`/produtos/${encodeURIComponent(produtoId)}`, {
+      method: 'DELETE',
+      headers: authorization(token),
+    });
+  },
 
   async atualizarCarrinho(itens) {
     return request('/carrinho', {
@@ -110,9 +114,7 @@ export const api = {
   async finalizarCheckout(dadosPedido, token) {
     return request('/checkout', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: authorization(token),
       body: JSON.stringify(dadosPedido),
     });
   },

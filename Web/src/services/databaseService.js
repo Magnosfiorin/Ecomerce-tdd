@@ -112,9 +112,9 @@ class DatabaseService {
     return this.mockProdutos.filter((p) => p.nome.toLowerCase().includes(termo));
   }
   
-  async criarProduto(produto) {
+  async criarProduto(produto, token) {
     try {
-      return await api.cadastrarProduto(produto);
+      return await api.cadastrarProduto(produto, token);
     } catch (error) {
       if (import.meta.env.DEV) {
         const novo = { id: Date.now(), ...produto };
@@ -123,6 +123,14 @@ class DatabaseService {
       }
       throw error;
     }
+  }
+
+  async carregarDashboardLoja(token) {
+    return api.carregarDashboardLoja(token);
+  }
+
+  async excluirProduto(produtoId, token) {
+    return api.excluirProduto(produtoId, token);
   }
 
   // =========================================================================
