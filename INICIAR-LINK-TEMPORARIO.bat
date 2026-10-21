@@ -24,39 +24,35 @@ if errorlevel 1 (
 echo Backend e PostgreSQL OK.
 echo.
 
-echo Verificando frontend e proxy da API...
+echo Verificando os dois frontends e seus proxies da API...
 powershell.exe -NoProfile -Command "try {$r=Invoke-WebRequest -Uri 'http://localhost:4173/api/health' -TimeoutSec 3; if ($r.StatusCode -eq 200) {exit 0}; exit 1} catch {exit 1}" >nul 2>&1
-if not errorlevel 1 (
-    set "FRONTEND_PORT=4173"
-    goto :frontend_ready
+if errorlevel 1 (
+    echo ERRO: o catalogo normal nao responde em http://localhost:4173.
+    echo Inicie o preview normal na porta 4173 antes de abrir o tunel.
+    goto :error
 )
 
-powershell.exe -NoProfile -Command "try {$r=Invoke-WebRequest -Uri 'http://localhost:3000/api/health' -TimeoutSec 3; if ($r.StatusCode -eq 200) {exit 0}; exit 1} catch {exit 1}" >nul 2>&1
-if not errorlevel 1 (
-    set "FRONTEND_PORT=3000"
-    goto :frontend_ready
+powershell.exe -NoProfile -Command "try {$r=Invoke-WebRequest -Uri 'http://localhost:4174/api/health' -TimeoutSec 3; if ($r.StatusCode -eq 200) {exit 0}; exit 1} catch {exit 1}" >nul 2>&1
+if errorlevel 1 (
+    echo ERRO: o catalogo B nao responde em http://localhost:4174.
+    echo Inicie o preview do Catalogo B na porta 4174 antes de abrir o tunel.
+    goto :error
 )
-
-echo ERRO: nenhum frontend com o proxy da API foi encontrado.
-echo Inicie o Vite Preview na porta 4173 ou npm run dev na porta 3000.
-echo Confira se http://localhost:4173/api/health ou
-echo http://localhost:3000/api/health abre localmente.
-goto :error
-
-:frontend_ready
-echo Frontend e proxy da API OK na porta %FRONTEND_PORT%.
+echo Os dois frontends e proxies da API estao OK.
 echo.
 
 where.exe cloudflared >nul 2>&1
 if not errorlevel 1 (
-    echo Iniciando o Cloudflare Tunnel para a porta %FRONTEND_PORT%...
-    start "E-Commerce - Cloudflare Tunnel" /D "%ROOT%" cmd.exe /k "cloudflared tunnel --url http://localhost:%FRONTEND_PORT%"
+    echo Iniciando dois Cloudflare Tunnels...
+    start "Catalogo normal - Cloudflare Tunnel" /D "%ROOT%" cmd.exe /k "cloudflared tunnel --url http://localhost:4173"
+    start "Catalogo B - Cloudflare Tunnel" /D "%ROOT%" cmd.exe /k "cloudflared tunnel --url http://localhost:4174"
     goto :success
 )
 
 if exist "%CLOUDFLARED_EXE%" (
-    echo Iniciando o Cloudflare Tunnel para a porta %FRONTEND_PORT%...
-    start "E-Commerce - Cloudflare Tunnel" /D "%ROOT%" cmd.exe /k ""%CLOUDFLARED_EXE%" tunnel --url http://localhost:%FRONTEND_PORT%"
+    echo Iniciando dois Cloudflare Tunnels...
+    start "Catalogo normal - Cloudflare Tunnel" /D "%ROOT%" cmd.exe /k ""%CLOUDFLARED_EXE%" tunnel --url http://localhost:4173"
+    start "Catalogo B - Cloudflare Tunnel" /D "%ROOT%" cmd.exe /k ""%CLOUDFLARED_EXE%" tunnel --url http://localhost:4174"
     goto :success
 )
 
@@ -68,8 +64,9 @@ goto :error
 :success
 echo.
 echo Uma nova janela foi aberta para o Cloudflare Tunnel.
-echo Copie e compartilhe o endereco HTTPS trycloudflare.com mostrado nela.
-echo Mantenha abertos o PostgreSQL, backend, frontend e tunel.
+echo Copie os dois enderecos HTTPS trycloudflare.com mostrados nas janelas:
+echo um para o catalogo normal e outro para o Catalogo B.
+echo Mantenha abertos o PostgreSQL, backend, os dois frontends e os tuneis.
 echo Pressione qualquer tecla para fechar esta janela.
 pause >nul
 exit /b 0
