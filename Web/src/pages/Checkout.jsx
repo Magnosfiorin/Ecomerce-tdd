@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { databaseService } from '../services/databaseService';
+import { api } from '../services/api';
 import { CheckCircle, ShieldCheck, ShoppingBag } from 'lucide-react';
 
 export default function Checkout() {
@@ -35,6 +36,10 @@ export default function Checkout() {
 
     try {
       setLoading(true);
+      // Confere o estoque atual antes de finalizar (outro cliente pode ter comprado antes).
+      await api.atualizarCarrinho(
+        itens.map((item) => ({ produtoId: item.produto.id, quantidade: item.quantidade }))
+      );
       const resultado = await databaseService.processarCheckout({
         itens: itens.map((item) => ({
           produtoId: item.produto.id,
