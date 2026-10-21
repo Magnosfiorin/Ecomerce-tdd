@@ -6,6 +6,8 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import br.com.ecommerce.service.UsuarioService;
 import br.com.ecommerce.service.CatalogoService;
+import br.com.ecommerce.service.CarrinhoException;
+import br.com.ecommerce.service.CarrinhoService;
 
 import br.com.ecommerce.controller.ProdutoController;
 import br.com.ecommerce.controller.CheckoutController;
@@ -302,11 +304,22 @@ public class Router implements HttpHandler {
         });
 
         // Dev 4: Módulo Carrinho de Compras
+        // Valida se os itens do carrinho cabem no estoque atual do banco.
+        CarrinhoService carrinhoService = new CarrinhoService(catalogoService);
         register("POST", "/api/carrinho", exchange -> {
-            Map<String, Object> response = new HashMap<>();
-            response.put("mensagem", "Endpoint do Carrinho pronto para implementação do Dev 4");
-            response.put("modulo", "Carrinho");
-            sendJsonResponse(exchange, 200, response);
+            CarrinhoRequest body = readJsonBody(exchange, CarrinhoRequest.class);
+            if (body == null) {
+                sendError(exchange, 400, "Corpo da requisição inválido.");
+                return;
+            }
+            try {
+                carrinhoService.validarItens(body.itens());
+                Map<String, Object> response = new HashMap<>();
+                response.put("sucesso", true);
+                sendJsonResponse(exchange, 200, response);
+            } catch (CarrinhoException e) {
+                sendError(exchange, 409, e.getMessage());
+            }
         });
 
         // Dev 5: Checkout transacional com validação e baixa de estoque.
@@ -504,4 +517,6 @@ public class Router implements HttpHandler {
     }
 
     private record Session(int usuarioId, Instant expiresAt) {}
+
+    private record CarrinhoRequest(java.util.List<br.com.ecommerce.model.ItemCheckout> itens) {}
 }
