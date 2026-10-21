@@ -29,7 +29,23 @@ export function CartProvider({ children }) {
     }
   }, [carrinho, itens, key]);
 
+  // Retorna { ok, mensagem }. Recusa a adição quando passaria do estoque.
   const adicionarItem = (produto, quantidade = 1) => {
+    if (quantidade > 0) {
+      const estoque = Number(produto.estoque ?? 0);
+      const noCarrinho = itens.find((item) => item.produto.id === produto.id)?.quantidade ?? 0;
+
+      if (estoque <= 0) {
+        return { ok: false, mensagem: `O produto "${produto.nome}" está esgotado.` };
+      }
+      if (noCarrinho + quantidade > estoque) {
+        return {
+          ok: false,
+          mensagem: `Limite atingido: "${produto.nome}" tem apenas ${estoque} unidade(s) em estoque (você já tem ${noCarrinho} no carrinho).`,
+        };
+      }
+    }
+
     setCarrinho((atual) => {
       const prev = atual.key === key ? atual.itens : carregarItens(key);
       const existente = prev.find((item) => item.produto.id === produto.id);
@@ -43,6 +59,7 @@ export function CartProvider({ children }) {
       }
       return { key, itens: [...prev, { produto, quantidade }] };
     });
+    return { ok: true };
   };
 
   const removerItem = (produtoId) => {

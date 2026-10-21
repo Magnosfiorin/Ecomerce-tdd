@@ -1,0 +1,246 @@
+/* Catálogo B (teste A/B): usa os tokens do index.css e prefixo cb- para não colidir com a variante A. */
+
+.cb-layout {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: start;
+}
+
+/* ---------- Filtros ---------- */
+.cb-filtros {
+  position: sticky;
+  top: 5.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.cb-busca {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+}
+
+.cb-busca:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.15);
+}
+
+.cb-busca input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 0.95rem;
+}
+
+.cb-grupo {
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cb-grupo legend {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.cb-opcao {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.cb-opcao input {
+  accent-color: var(--primary);
+  width: 1rem;
+  height: 1rem;
+}
+
+.cb-opcao input:focus-visible,
+.cb-stepper button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ---------- Cabeçalho e lista ---------- */
+.cb-cabecalho {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--text-main);
+}
+
+.cb-contagem {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.cb-lista {
+  list-style: none;
+}
+
+.cb-item {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) 15rem;
+  gap: 1.25rem;
+  align-items: center;
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.cb-imagem {
+  width: 5.5rem;
+  height: 5.5rem;
+  object-fit: cover;
+  border-radius: var(--radius);
+  background: var(--border);
+}
+
+.cb-info h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+/* ---------- Medidor de estoque ---------- */
+.cb-estoque {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.cb-medidor {
+  width: 6rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.cb-medidor span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--success);
+  transition: width 0.3s ease;
+}
+
+.cb-estoque-baixo { color: var(--warning); }
+.cb-estoque-baixo .cb-medidor span { background: var(--warning); }
+.cb-estoque-zerado { color: var(--error); }
+.cb-estoque-zerado .cb-medidor span { background: var(--error); }
+
+.cb-no-carrinho {
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ---------- Compra ---------- */
+.cb-compra {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.6rem;
+}
+
+.cb-preco {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.cb-stepper {
+  display: grid;
+  grid-template-columns: 2.25rem 1fr 2.25rem;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.cb-stepper span {
+  text-align: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.cb-stepper button {
+  display: grid;
+  place-items: center;
+  height: 2.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.cb-stepper button:hover:not(:disabled) { background: var(--bg); }
+.cb-stepper button:disabled { color: var(--border); cursor: not-allowed; }
+
+.cb-botao {
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.cb-aviso {
+  min-height: 1.2rem;
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+
+.cb-aviso-ok { color: var(--success); }
+.cb-aviso-erro { color: var(--error); }
+
+/* ---------- Telas menores ---------- */
+@media (max-width: 860px) {
+  .cb-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  .cb-filtros {
+    position: static;
+  }
+
+  .cb-item {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+  }
+
+  .cb-imagem {
+    width: 4.5rem;
+    height: 4.5rem;
+  }
+
+  .cb-compra {
+    grid-column: 1 / -1;
+  }
+
+  .cb-preco {
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cb-medidor span {
+    transition: none;
+  }
+}
