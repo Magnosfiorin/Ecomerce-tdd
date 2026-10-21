@@ -1,12 +1,26 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { api } from '../services/api';
 import { Trash2, ShoppingBag, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react';
 
 export default function Carrinho() {
   const { itens, removerItem, adicionarItem, total, totalItens } = useCart();
   const [alertaEstoque, setAlertaEstoque] = useState('');
   const navigate = useNavigate();
+
+  // Confere o estoque real no banco antes de seguir para o checkout.
+  const handleCheckout = async () => {
+    setAlertaEstoque('');
+    try {
+      await api.atualizarCarrinho(
+        itens.map((item) => ({ produtoId: item.produto.id, quantidade: item.quantidade }))
+      );
+      navigate('/checkout');
+    } catch (error) {
+      setAlertaEstoque(error.message);
+    }
+  };
 
   const handleAlterarQuantidade = (item, novaQtd) => {
     setAlertaEstoque('');
@@ -127,7 +141,7 @@ export default function Carrinho() {
             </div>
 
             <button
-              onClick={() => navigate('/checkout')}
+              onClick={handleCheckout}
               className="btn btn-primary btn-block btn-lg"
             >
               Prosseguir para o Checkout <ArrowRight size={18} />

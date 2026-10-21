@@ -26,6 +26,7 @@ export default function Catalogo() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
   const [adicionadoId, setAdicionadoId] = useState(null);
+  const [erroEstoque, setErroEstoque] = useState('');
   const [busca, setBusca] = useState('');
   const [ordenacao, setOrdenacao] = useState('nome-asc');
   const [visualizacao, setVisualizacao] = useState('grade');
@@ -93,7 +94,12 @@ export default function Catalogo() {
 
   const handleComprar = (produto) => {
     if (estaIndisponivel(produto)) return;
-    adicionarItem(produto, 1);
+    const resultado = adicionarItem(produto, 1);
+    if (!resultado.ok) {
+      setErroEstoque(resultado.mensagem);
+      return;
+    }
+    setErroEstoque('');
     setAdicionadoId(produto.id);
     setTimeout(() => setAdicionadoId(null), 1500);
   };
@@ -165,6 +171,7 @@ export default function Catalogo() {
       </div>
 
       {erro && <div className="alert alert-error" role="alert">{erro}</div>}
+      {erroEstoque && <div className="alert alert-warning" role="alert">{erroEstoque}</div>}
 
       {loading ? (
         <div className="loading-state">Carregando catálogo do banco de dados...</div>
