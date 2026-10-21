@@ -348,6 +348,35 @@ input:focus, select:focus {
   opacity: 0.65;
 }
 
+/* Botões desativados (ex.: produto esgotado) */
+.btn:disabled:not(.btn-success) {
+  background-color: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn:disabled:not(.btn-success):hover {
+  background-color: #e2e8f0;
+}
+
+/* Card de produto esgotado: imagem e texto esmaecidos para sinalizar indisponibilidade */
+.produto-card--esgotado .produto-imagem,
+.produto-card--esgotado .produto-card-body {
+  opacity: 0.55;
+  filter: grayscale(0.8);
+}
+
+.produto-card--esgotado .produto-card-badge {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.produto-card--esgotado:hover {
+  transform: none;
+}
+
 .btn-lg {
   padding: 0.85rem 1.5rem;
   font-size: 1.05rem;
