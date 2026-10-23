@@ -15,10 +15,14 @@ import CatalogoB from '../pages/CatalogoB';
  * Todas as páginas dos 5 módulos estão centralizadas aqui.
  */
 export default function AppRoutes() {
+  const catalogoInicial = import.meta.env.VITE_CATALOGO_VARIANT === 'catalogo-b'
+    ? <CatalogoB />
+    : <Catalogo />;
+
   return (
     <Routes>
-        {/* Dev 3: Catálogo de Produtos (Início) com Teste A/B */}
-      <Route path="/" element={<Catalogo />} />
+      {/* Cada build pode escolher seu catálogo inicial. */}
+      <Route path="/" element={catalogoInicial} />
       <Route path="/catalogo-b" element={<CatalogoB />} />
 
       {/* Dev 1: Módulo de Login e Identificação de Perfil */}
