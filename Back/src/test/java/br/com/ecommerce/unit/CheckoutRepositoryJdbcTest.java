@@ -9,20 +9,57 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
+import java.math.BigDecimal;
+import java.util.Map;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 class CheckoutRepositoryJdbcTest {
 
     @Test
     void deveReverterTransacaoQuandoFalharAoSalvarItemDoPedido() throws Exception {
-        Connection connection = mock(Connection.class);
+        boolean[] transacao = new boolean[2];
+        ResultSet usuarioResult = resultSet(Map.of("tipo_usuario", 1));
+        ResultSet produtoResult = resultSet(Map.of(
+                "ativo", true,
+                "estoque", 5,
+                "preco", new BigDecimal("12.50")));
+        ResultSet pedidoResult = resultSet(Map.of("id", 88));
+
+        Connection connection = proxy(Connection.class, (proxy, method, args) -> {
+            switch (method.getName()) {
+                case "prepareStatement" -> {
+                    String sql = (String) args[0];
+                    if (sql.contains("SELECT id, tipo_usuario FROM usuarios")) {
+                        return preparedStatement(usuarioResult, false);
+                    }
+                    if (sql.contains("FOR UPDATE")) {
+                        return preparedStatement(produtoResult, false);
+                    }
+                    if (sql.contains("INSERT INTO pedidos")) {
+                        return preparedStatement(pedidoResult, false);
+                    }
+                    if (sql.contains("INSERT INTO itens_pedido")) {
+                        return preparedStatement(null, true);
+                    }
+                    throw new SQLException("SQL inesperado: " + sql);
+                }
+                case "rollback" -> {
+                    transacao[0] = true;
+                    return null;
+                }
+                case "commit" -> {
+                    transacao[1] = true;
+                    return null;
+                }
+                default -> {
+                    return null;
+                }
+            }
+        });
         DatabaseConfig databaseConfig = new DatabaseConfig(
                 "jdbc:postgresql://localhost/test", "test", "test") {
             @Override
@@ -30,34 +67,6 @@ class CheckoutRepositoryJdbcTest {
                 return connection;
             }
         };
-        PreparedStatement usuarioStatement = mock(PreparedStatement.class);
-        PreparedStatement produtoStatement = mock(PreparedStatement.class);
-        PreparedStatement pedidoStatement = mock(PreparedStatement.class);
-        PreparedStatement itemStatement = mock(PreparedStatement.class);
-        ResultSet usuarioResult = mock(ResultSet.class);
-        ResultSet produtoResult = mock(ResultSet.class);
-        ResultSet pedidoResult = mock(ResultSet.class);
-
-        when(connection.prepareStatement(contains("SELECT id, tipo_usuario FROM usuarios")))
-                .thenReturn(usuarioStatement);
-        when(connection.prepareStatement(contains("FOR UPDATE")))
-                .thenReturn(produtoStatement);
-        when(connection.prepareStatement(contains("INSERT INTO pedidos")))
-                .thenReturn(pedidoStatement);
-        when(connection.prepareStatement(contains("INSERT INTO itens_pedido")))
-                .thenReturn(itemStatement);
-        when(usuarioStatement.executeQuery()).thenReturn(usuarioResult);
-        when(usuarioResult.next()).thenReturn(true);
-        when(usuarioResult.getInt("tipo_usuario")).thenReturn(1);
-        when(produtoStatement.executeQuery()).thenReturn(produtoResult);
-        when(produtoResult.next()).thenReturn(true);
-        when(produtoResult.getBoolean("ativo")).thenReturn(true);
-        when(produtoResult.getInt("estoque")).thenReturn(5);
-        when(produtoResult.getBigDecimal("preco")).thenReturn(new java.math.BigDecimal("12.50"));
-        when(pedidoStatement.executeQuery()).thenReturn(pedidoResult);
-        when(pedidoResult.next()).thenReturn(true);
-        when(pedidoResult.getInt("id")).thenReturn(88);
-        when(itemStatement.executeUpdate()).thenThrow(new SQLException("falha simulada"));
 
         CheckoutRepositoryJdbc repository = new CheckoutRepositoryJdbc(databaseConfig);
 
@@ -68,7 +77,40 @@ class CheckoutRepositoryJdbcTest {
                 "Rua A, 10",
                 "PIX"));
 
-        verify(connection).rollback();
-        verify(connection, never()).commit();
+        org.junit.jupiter.api.Assertions.assertTrue(transacao[0]);
+        org.junit.jupiter.api.Assertions.assertFalse(transacao[1]);
+    }
+
+    private static PreparedStatement preparedStatement(ResultSet resultSet, boolean failOnUpdate) {
+        return proxy(PreparedStatement.class, (proxy, method, args) -> switch (method.getName()) {
+            case "executeQuery" -> resultSet;
+            case "executeUpdate" -> {
+                if (failOnUpdate) {
+                    throw new SQLException("falha simulada");
+                }
+                yield 1;
+            }
+            default -> null;
+        });
+    }
+
+    private static ResultSet resultSet(Map<String, Object> values) {
+        boolean[] firstRow = {true};
+        return proxy(ResultSet.class, (proxy, method, args) -> switch (method.getName()) {
+            case "next" -> {
+                boolean hasRow = firstRow[0];
+                firstRow[0] = false;
+                yield hasRow;
+            }
+            case "getInt", "getBoolean", "getBigDecimal" -> values.get((String) args[0]);
+            default -> null;
+        });
+    }
+
+    private static <T> T proxy(Class<T> type, InvocationHandler handler) {
+        return type.cast(Proxy.newProxyInstance(
+                type.getClassLoader(),
+                new Class<?>[]{type},
+                handler));
     }
 }
