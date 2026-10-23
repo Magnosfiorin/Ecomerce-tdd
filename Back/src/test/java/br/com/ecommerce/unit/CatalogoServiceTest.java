@@ -1,17 +1,27 @@
 package br.com.ecommerce.unit;
 
-import br.com.ecommerce.config.DatabaseConfig;
-import br.com.ecommerce.model.Produto;
-import br.com.ecommerce.service.CatalogoService;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.List;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
-import static org.junit.jupiter.api.Assertions.*;
+import br.com.ecommerce.config.DatabaseConfig;
+import br.com.ecommerce.model.Produto;
+import br.com.ecommerce.service.CatalogoService;
 
 @DisplayName("Testes Unitários - Serviço de Catálogo (Dev 3)")
 public class CatalogoServiceTest {
@@ -72,5 +82,44 @@ public class CatalogoServiceTest {
 
         assertEquals(1, resultado.size());
         assertEquals("Camiseta Azul", resultado.get(0).getNome());
+    }
+
+        @Test
+    @DisplayName("Teste Unitário 3: Produto ativo sem estoque continua listado, mas marcado como indisponível")
+    void deveListarProdutoEsgotadoComoIndisponivel() {
+        CatalogoService comEsgotado = new CatalogoService(null, List.of(
+                new Produto(1, "Camiseta Azul", 49.90, 10, true),
+                new Produto(4, "Boné Vermelho", 39.90, 0, true)));
+
+        List<Produto> lista = comEsgotado.listarAtivos();
+
+        assertEquals(2, lista.size());
+        Produto esgotado = lista.stream()
+                .filter(p -> p.getNome().equals("Boné Vermelho"))
+                .findFirst()
+                .orElseThrow();
+        assertFalse(esgotado.isDisponivel());
+        assertTrue(lista.stream().filter(p -> p.getEstoque() > 0).allMatch(Produto::isDisponivel));
+    }
+
+    @Test
+    @DisplayName("Teste de contrato: resposta JSON de /api/produtos deve trazer 'disponivel' em cada produto")
+    void respostaJsonDoCatalogoDeveInformarDisponibilidade() {
+        CatalogoService comEsgotado = new CatalogoService(null, List.of(
+                new Produto(1, "Camiseta Azul", 49.90, 10, true),
+                new Produto(4, "Boné Vermelho", 39.90, 0, true)));
+        // Mesma serialização usada pelo Router na rota GET /api/produtos
+        Map<String, Object> response = new HashMap<>();
+        response.put("produtos", comEsgotado.listarAtivos());
+
+        String corpo = new GsonBuilder().setPrettyPrinting().create().toJson(response);
+        JsonArray produtos = JsonParser.parseString(corpo).getAsJsonObject().getAsJsonArray("produtos");
+
+        assertEquals(2, produtos.size());
+        for (int i = 0; i < produtos.size(); i++) {
+            JsonObject produto = produtos.get(i).getAsJsonObject();
+            assertTrue(produto.has("disponivel"), "Todo produto do catálogo deve informar 'disponivel'");
+            assertEquals(produto.get("estoque").getAsInt() > 0, produto.get("disponivel").getAsBoolean());
+        }
     }
 }

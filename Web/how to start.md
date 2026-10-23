@@ -51,4 +51,4 @@ jmeter -n -t Web/jmeter/produtos.jmx -Japi_host=localhost -Japi_port=8080 -Japi_
 2. Em **Settings → Environment Variables**, configure `VITE_API_BASE_URL` como `https://ecomerce-tdd-back-steel.vercel.app/api` para os ambientes **Production**, **Preview** e **Development** que desejar.
 3. Faça um novo deploy do frontend depois de adicionar ou alterar a variável: o Vite incorpora esse valor durante o build.
 
-O frontend também usa essa URL como padrão nos builds de produção. Em desenvolvimento local, continua usando `http://localhost:8080/api`. A API precisa estar publicada e responder em `/api/health` antes de testar as chamadas do site.
+Sem `VITE_API_BASE_URL`, o frontend usa `/api` no mesmo domínio; o proxy do `vite.config.js` encaminha as chamadas para `http://localhost:8080` tanto em desenvolvimento quanto no `vite preview`. Se `.env` definir `VITE_API_BASE_URL` com `localhost`, esse valor também é convertido para `/api`, para que visitantes pelo túnel não tentem acessar o próprio computador. Para a Vercel com API remota, configure `VITE_API_BASE_URL` com o endereço HTTPS da API e publique um novo build após alterá-la.

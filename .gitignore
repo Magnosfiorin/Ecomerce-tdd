@@ -10,6 +10,7 @@ Back/target/
 # Node / Cypress / Build
 Web/node_modules/
 Web/dist/
+Web/dist-catalogo-b/
 Web/cypress/videos/
 Web/cypress/screenshots/
 
